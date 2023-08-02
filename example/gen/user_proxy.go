@@ -5,6 +5,8 @@ import (
 	"log"
 	"reflect"
 
+	"github.com/pkg/errors"
+
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/example/types"
 )
@@ -27,10 +29,30 @@ func (u *UserProxy) ID() string {
 
 func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount int) error {
 	log.Println("UserProxy.TransferBalance")
-	return nil
+
+	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+		Method: "TransferBalance",
+	})
+	if err != nil {
+		return errors.Wrap(err, "send TransferBalance")
+	}
+
+	// Get result
+	res := <-resultChannel
+	return errors.Wrap(res.Error, "get result TransferBalance")
 }
 
 func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
 	log.Println("UserProxy.AddBalance")
-	return nil
+
+	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+		Method: "AddBalance",
+	})
+	if err != nil {
+		return errors.Wrap(err, "send AddBalance")
+	}
+
+	// Get result
+	res := <-resultChannel
+	return errors.Wrap(res.Error, "get result AddBalance")
 }

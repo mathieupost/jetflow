@@ -37,6 +37,14 @@ func NewClient(ctx context.Context, mapping map[string]jetflow.OperatorFactory) 
 	return client, nil
 }
 
+func (c *Client) Send(ctx context.Context, operator jetflow.Operator, message jetflow.OperatorCall) (chan jetflow.Result, error) {
+	log.Println("Client.Send", operator.ID(), message.Method, string(message.Params))
+
+	responseChannel := make(chan jetflow.Result, 1)
+	responseChannel <- jetflow.Result{}
+	return responseChannel, nil
+}
+
 func (c *Client) Find(ctx context.Context, id string, operator interface{}) error {
 	log.Printf("Client.Find %T %s\n", operator, id)
 	value := reflect.ValueOf(operator)
