@@ -2,7 +2,10 @@ module github.com/mathieupost/jetflow
 
 go 1.20
 
-require github.com/nats-io/nats-server/v2 v2.9.20
+require (
+	github.com/nats-io/nats-server/v2 v2.9.20
+	github.com/pkg/errors v0.9.1
+)
 
 require (
 	github.com/klauspost/compress v1.16.5 // indirect
