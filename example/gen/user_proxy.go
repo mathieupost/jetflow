@@ -28,6 +28,10 @@ func (u *UserProxy) ID() string {
 	return u.OperatorID
 }
 
+func (u *UserProxy) Type() string {
+	return "User"
+}
+
 type Params_User_TransferBalance struct {
 	U2     *UserProxy
 	Amount int
