@@ -2,6 +2,7 @@ package gen
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"reflect"
 
@@ -27,11 +28,22 @@ func (u *UserProxy) ID() string {
 	return u.OperatorID
 }
 
+type Params_User_TransferBalance struct {
+	U2     *UserProxy
+	Amount int
+}
+
 func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount int) error {
 	log.Println("UserProxy.TransferBalance")
+	params := Params_User_TransferBalance{U2: u2.(*UserProxy), Amount: amount}
+	bytes, err := json.Marshal(params)
+	if err != nil {
+		return errors.Wrap(err, "marshal params")
+	}
 
 	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
 		Method: "TransferBalance",
+		Params: bytes,
 	})
 	if err != nil {
 		return errors.Wrap(err, "send TransferBalance")
@@ -42,11 +54,21 @@ func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount i
 	return errors.Wrap(res.Error, "get result TransferBalance")
 }
 
+type Params_User_AddBalance struct {
+	Amount int
+}
+
 func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
 	log.Println("UserProxy.AddBalance")
+	params := Params_User_AddBalance{Amount: amount}
+	bytes, err := json.Marshal(params)
+	if err != nil {
+		return errors.Wrap(err, "marshal params")
+	}
 
 	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
 		Method: "AddBalance",
+		Params: bytes,
 	})
 	if err != nil {
 		return errors.Wrap(err, "send AddBalance")
