@@ -1,4 +1,4 @@
-package jetstream_test
+package jetstream
 
 import (
 	"context"
@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	natsjetstream "github.com/nats-io/nats.go/jetstream"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mathieupost/jetflow/example/gen"
 	"github.com/mathieupost/jetflow/example/types"
-	"github.com/mathieupost/jetflow/jetstream"
 )
 
 func TestClientFind(t *testing.T) {
@@ -52,13 +51,13 @@ func TestClientSend(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func initJetStream(t *testing.T, ctx context.Context) (js natsjetstream.JetStream, clear func()) {
+func initJetStream(t *testing.T, ctx context.Context) (js jetstream.JetStream, clear func()) {
 	log.Println("initJetStream")
 
 	nc, err := nats.Connect("0.0.0.0:4222")
 	require.NoError(t, err)
 
-	js, err = natsjetstream.New(nc)
+	js, err = jetstream.New(nc)
 	require.NoError(t, err)
 
 	clear = func() {
@@ -68,7 +67,7 @@ func initJetStream(t *testing.T, ctx context.Context) (js natsjetstream.JetStrea
 	return js, clear
 }
 
-func clearJetStream(t *testing.T, ctx context.Context, js natsjetstream.JetStream) {
+func clearJetStream(t *testing.T, ctx context.Context, js jetstream.JetStream) {
 	log.Println("clearJetStream")
 
 	// Clear all streams.
@@ -101,20 +100,12 @@ func clearJetStream(t *testing.T, ctx context.Context, js natsjetstream.JetStrea
 	log.Println("done clearJetStream")
 }
 
-func initClient(t *testing.T, ctx context.Context, js natsjetstream.JetStream) *jetstream.Client {
+func initClient(t *testing.T, ctx context.Context, js jetstream.JetStream) *Client {
 	log.Println("initClient")
 
 	mapping := gen.FactoryMapping()
-	client, err := jetstream.NewClient(ctx, js, mapping)
+	client, err := NewClient(ctx, js, mapping)
 	require.NoError(t, err)
 
 	return client
-}
-
-type mockJetStream struct {
-	natsjetstream.JetStream
-}
-
-func (m *mockJetStream) CreateStream(ctx context.Context, cfg natsjetstream.StreamConfig) (natsjetstream.Stream, error) {
-	return nil, nil
 }
