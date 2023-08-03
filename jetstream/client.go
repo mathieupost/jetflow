@@ -42,6 +42,7 @@ func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping map[s
 		jetstream: jetstream,
 	}
 	client.initStreams(ctx)
+	client.initConsumer(ctx)
 
 	return client, nil
 }
@@ -72,7 +73,6 @@ func (c *Client) Send(ctx context.Context, operator jetflow.OperatorProxy, messa
 	// Create a channel to receive the response.
 	responseChannel := make(chan jetflow.Result, 1)
 	c.responseChannels.Store(requestID, responseChannel)
-	responseChannel <- jetflow.Result{} // TODO remove when we receive responses.
 	return responseChannel, nil
 }
 
@@ -104,6 +104,14 @@ func (c *Client) Find(ctx context.Context, id string, operator interface{}) erro
 
 func (c *Client) initStreams(ctx context.Context) error {
 	_, err := c.jetstream.CreateStream(ctx, jetstream.StreamConfig{
+		Name:     STREAM_NAME_CLIENT,
+		Subjects: []string{STREAM_NAME_CLIENT + ".*"},
+	})
+	if err != nil {
+		return errors.Wrap(err, "create client stream")
+	}
+
+	_, err = c.jetstream.CreateStream(ctx, jetstream.StreamConfig{
 		Name:     STREAM_NAME_OPERATOR,
 		Subjects: []string{STREAM_NAME_OPERATOR + ".*.*"},
 	})
@@ -112,4 +120,58 @@ func (c *Client) initStreams(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *Client) initConsumer(ctx context.Context) error {
+	consumer, err := c.jetstream.CreateOrUpdateConsumer(
+		ctx,
+		STREAM_NAME_CLIENT,
+		jetstream.ConsumerConfig{
+			Durable:       c.id.String(),
+			AckPolicy:     jetstream.AckExplicitPolicy,
+			FilterSubject: fmt.Sprintf("%s.%s", STREAM_NAME_CLIENT, c.id.String()),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "create consumer")
+	}
+
+	_, err = consumer.Consume(c.handleResponse)
+	if err != nil {
+		return errors.Wrap(err, "init message consumer")
+	}
+
+	return nil
+}
+
+func (c *Client) handleResponse(msg jetstream.Msg) {
+	// Load the request channel
+	header := msg.Headers()
+	requestID := header.Get(HEADER_KEY_REQUEST_ID)
+	rc, ok := c.responseChannels.LoadAndDelete(requestID)
+	if !ok {
+		panic("requestID was not in responseChannels")
+	}
+	responseChannel := rc.(chan jetflow.Result)
+	defer close(responseChannel)
+
+	// Unmarshal the result
+	var result jetflow.Result
+	err := json.Unmarshal(msg.Data(), &result)
+	if err != nil {
+		msg.Nak()
+		responseChannel <- jetflow.Result{
+			Error: errors.Wrap(err, "unmarshal result"),
+		}
+		return
+	}
+
+	// Acknowledge the result
+	err = msg.Ack()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	// Send the result over the channel
+	responseChannel <- result
 }
