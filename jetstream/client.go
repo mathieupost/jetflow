@@ -28,8 +28,8 @@ var _ jetflow.Client = (*Client)(nil)
 
 type Client struct {
 	id               uuid.UUID
-	mapping          map[string]jetflow.OperatorFactory
 	jetstream        jetstream.JetStream
+	mapping          map[string]jetflow.OperatorFactory
 	responseChannels sync.Map
 }
 
@@ -38,8 +38,8 @@ func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping map[s
 
 	client := &Client{
 		id:        clientID,
-		mapping:   mapping,
 		jetstream: jetstream,
+		mapping:   mapping,
 	}
 	client.initStreams(ctx)
 	client.initConsumer(ctx)
