@@ -29,11 +29,11 @@ var _ jetflow.Client = (*Client)(nil)
 type Client struct {
 	id               uuid.UUID
 	jetstream        jetstream.JetStream
-	mapping          map[string]jetflow.OperatorFactory
+	mapping          jetflow.OperatorFactoryMapping
 	responseChannels sync.Map
 }
 
-func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping map[string]jetflow.OperatorFactory) (*Client, error) {
+func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping jetflow.OperatorFactoryMapping) (*Client, error) {
 	clientID := uuid.New()
 
 	client := &Client{
