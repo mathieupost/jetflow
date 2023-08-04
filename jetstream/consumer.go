@@ -18,16 +18,18 @@ type Consumer struct {
 	id        uuid.UUID
 	jetstream jetstream.JetStream
 	client    *Client
+	storage   jetflow.Storage
 	inbox     chan jetstream.Msg
 }
 
-func NewConsumer(ctx context.Context, jetstream jetstream.JetStream, client *Client) (*Consumer, error) {
+func NewConsumer(ctx context.Context, jetstream jetstream.JetStream, client *Client, storage jetflow.Storage) (*Consumer, error) {
 	consumerID := uuid.New()
 
 	consumer := &Consumer{
 		id:        consumerID,
 		jetstream: jetstream,
 		client:    client,
+		storage:   storage,
 	}
 	consumer.initConsumer(ctx)
 
@@ -81,18 +83,19 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	ctx = ctxWithRequestID(ctx, requestID)
 
 	// Unmarshal the method and parameters.
-	var message jetflow.OperatorCall
-	err := json.Unmarshal(msg.Data(), &message)
+	var call jetflow.OperatorCall
+	err := json.Unmarshal(msg.Data(), &call)
 	if err != nil {
 		panic(err)
 	}
 	msg.Ack()
 
-	// TODO retrieve/init the operator.
-	// TODO call actual operator
-	// TODO fill the result
+	operatorID := call.ID
+	operatorType := call.Type
+	operator, err := c.storage.GetOperator(ctx, operatorType, operatorID, requestID)
+	result := operator.Call(ctx, call)
 
-	data, err := json.Marshal(jetflow.Result{})
+	data, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
 	}

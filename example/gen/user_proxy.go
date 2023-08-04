@@ -42,6 +42,7 @@ func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount i
 	}
 
 	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+		ID:     u.OperatorID,
 		Type:   "User",
 		Method: "TransferBalance",
 		Params: bytes,
@@ -68,6 +69,7 @@ func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
 	}
 
 	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+		ID:     u.OperatorID,
 		Type:   "User",
 		Method: "AddBalance",
 		Params: bytes,

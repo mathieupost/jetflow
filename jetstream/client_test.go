@@ -36,7 +36,10 @@ func TestClientSend(t *testing.T) {
 	js, clear := initJetStream(t, ctx)
 	defer clear()
 	client := initClient(t, ctx, js)
-	_, err := NewConsumer(ctx, js, client)
+
+	// Setup consumer
+	storage := &mockStorage{}
+	_, err := NewConsumer(ctx, js, client, storage)
 	require.NoError(t, err)
 
 	// Find the users.

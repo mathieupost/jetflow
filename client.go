@@ -48,6 +48,7 @@ type OperatorFactoryMapping map[string]OperatorFactory
 type OperatorFactory func(id string, client Client) reflect.Value
 
 type OperatorCall struct {
+	ID     string
 	Type   string
 	Method string
 	Params []byte
@@ -56,4 +57,8 @@ type OperatorCall struct {
 type Result struct {
 	Error  error
 	Values []byte
+}
+
+type Storage interface {
+	GetOperator(ctx context.Context, otype string, oid string, requestID string) (OperatorHandler, error)
 }
