@@ -2,7 +2,6 @@ package jetstream
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"testing"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/example/gen"
 	"github.com/mathieupost/jetflow/example/types"
 )
@@ -38,25 +36,7 @@ func TestClientSend(t *testing.T) {
 	js, clear := initJetStream(t, ctx)
 	defer clear()
 	client := initClient(t, ctx, js)
-
-	// Emulate an operator
-	consumer := initOperatorConsumer(t, ctx, js)
-	_, err := consumer.Consume(func(msg jetstream.Msg) {
-		log.Println("OperatorConsumer received", msg.Headers())
-		clientID := msg.Headers().Get(HEADER_KEY_CLIENT_ID)
-		requestID := msg.Headers().Get(HEADER_KEY_REQUEST_ID)
-		msg.Ack()
-
-		data, err := json.Marshal(jetflow.Result{})
-		require.NoError(t, err)
-
-		res := nats.NewMsg("CLIENT." + clientID)
-		res.Header.Set(HEADER_KEY_REQUEST_ID, requestID)
-		res.Data = data
-		_, err = js.PublishMsg(ctx, res)
-		require.NoError(t, err)
-		log.Println("published msg", res.Subject)
-	})
+	_, err := NewConsumer(ctx, js, client)
 	require.NoError(t, err)
 
 	// Find the users.
@@ -130,19 +110,4 @@ func initClient(t *testing.T, ctx context.Context, js jetstream.JetStream) *Clie
 	require.NoError(t, err)
 
 	return client
-}
-
-func initOperatorConsumer(t *testing.T, ctx context.Context, js jetstream.JetStream) jetstream.Consumer {
-	log.Println("initOperatorConsumer")
-
-	consumer, err := js.CreateOrUpdateConsumer(
-		ctx,
-		STREAM_NAME_OPERATOR,
-		jetstream.ConsumerConfig{
-			AckPolicy: jetstream.AckExplicitPolicy,
-		},
-	)
-	require.NoError(t, err)
-
-	return consumer
 }
