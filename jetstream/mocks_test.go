@@ -6,6 +6,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/mathieupost/jetflow"
+	"github.com/mathieupost/jetflow/example/gen"
 )
 
 // Mock jetstream.JetStream
@@ -33,7 +34,7 @@ func (m *mockConsumer) Consume(handler jetstream.MessageHandler, opts ...jetstre
 type mockStorage struct{}
 
 func (m *mockStorage) GetOperator(ctx context.Context, otype string, oid string, requestID string) (jetflow.OperatorHandler, error) {
-	return &mockOperatorHandler{}, nil
+	return gen.NewUserHandler(oid), nil
 }
 
 type mockOperatorHandler struct{}
