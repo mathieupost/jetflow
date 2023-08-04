@@ -17,7 +17,7 @@ import (
 )
 
 func TestClientFind(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	js := &mockJetStream{}
@@ -31,7 +31,7 @@ func TestClientFind(t *testing.T) {
 }
 
 func TestClientSend(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	// Setup jetstream

@@ -35,21 +35,24 @@ func NewConsumer(ctx context.Context, jetstream jetstream.JetStream, client *Cli
 }
 
 func (c *Consumer) initConsumer(ctx context.Context) error {
+	log.Println("Consumer.initConsumer")
 	consumer, err := c.jetstream.CreateOrUpdateConsumer(
 		ctx,
 		STREAM_NAME_OPERATOR,
 		jetstream.ConsumerConfig{
-			Durable:   c.id.String(),
+			Durable:   "Consumer-" + c.id.String(),
 			AckPolicy: jetstream.AckExplicitPolicy,
 		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "create consumer")
 	}
+	log.Println("Consumer.initConsumer", consumer.CachedInfo().Name)
 
 	// Setup a channel to receive messages from the JetStream server.
 	c.inbox = make(chan jetstream.Msg, 100)
 	_, err = consumer.Consume(func(msg jetstream.Msg) {
+		log.Println("Consumer.consume put in inbox")
 		c.inbox <- msg
 	})
 	if err != nil {
@@ -67,12 +70,15 @@ func (c *Consumer) initConsumer(ctx context.Context) error {
 }
 
 func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	subject := msg.Subject()
+	log.Println("Consumer.handleOperatorCall")
 	headers := msg.Headers()
-	log.Println("Consumer received on", subject, headers)
+	clientID := headers.Get(HEADER_KEY_CLIENT_ID)
+	requestID := headers.Get(HEADER_KEY_REQUEST_ID)
+	callID := headers.Get(HEADER_KEY_CALL_ID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	ctx = ctxWithRequestID(ctx, requestID)
 
 	// Unmarshal the method and parameters.
 	var message jetflow.OperatorCall
@@ -82,11 +88,9 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	}
 	msg.Ack()
 
-	requestID := headers.Get(HEADER_KEY_REQUEST_ID)
-	// TODO retrieve/init the operator based on the subject
-	// type and id and the requestID.
+	// TODO retrieve/init the operator.
 	// TODO call actual operator
-	// TODO send back result
+	// TODO fill the result
 
 	data, err := json.Marshal(jetflow.Result{})
 	if err != nil {
@@ -94,9 +98,8 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	}
 
 	// Send back to the caller.
-	clientID := headers.Get(HEADER_KEY_CLIENT_ID)
 	res := nats.NewMsg("CLIENT." + clientID)
-	res.Header.Set(HEADER_KEY_REQUEST_ID, requestID)
+	res.Header.Set(HEADER_KEY_CALL_ID, callID)
 	res.Data = data
 	_, err = c.jetstream.PublishMsg(ctx, res)
 	if err != nil {

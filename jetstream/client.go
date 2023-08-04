@@ -20,8 +20,9 @@ const (
 	STREAM_NAME_CLIENT   = "CLIENT"
 	STREAM_NAME_OPERATOR = "OPERATOR"
 
-	HEADER_KEY_CLIENT_ID  = "ClientID"
-	HEADER_KEY_REQUEST_ID = "RequestID"
+	HEADER_KEY_CLIENT_ID  = "CLIENT_ID"
+	HEADER_KEY_REQUEST_ID = "REQUEST_ID"
+	HEADER_KEY_CALL_ID    = "CALL_ID"
 )
 
 var _ jetflow.Client = (*Client)(nil)
@@ -47,9 +48,9 @@ func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping jetfl
 	return client, nil
 }
 
-func (c *Client) Send(ctx context.Context, operator jetflow.OperatorProxy, message jetflow.OperatorCall) (chan jetflow.Result, error) {
-	log.Println("Client.Send", operator.Type(), operator.ID(), message.Method, string(message.Params))
-	requestID := uuid.New().String()
+func (c *Client) Send(ctx context.Context, operator jetflow.Operator, message jetflow.OperatorCall) (chan jetflow.Result, error) {
+	callID := uuid.NewString()
+	log.Println("Client.Send", message.Type, operator.ID(), message.Method, string(message.Params))
 
 	// Marshal the message
 	payload, err := json.Marshal(message)
@@ -58,10 +59,11 @@ func (c *Client) Send(ctx context.Context, operator jetflow.OperatorProxy, messa
 	}
 
 	// Create nats message
-	subject := fmt.Sprintf("%s.%s.%s", STREAM_NAME_OPERATOR, operator.Type(), operator.ID())
+	subject := fmt.Sprintf("%s.%s.%s", STREAM_NAME_OPERATOR, message.Type, operator.ID())
 	msg := nats.NewMsg(subject)
-	msg.Header.Add(HEADER_KEY_CLIENT_ID, c.id.String())
-	msg.Header.Add(HEADER_KEY_REQUEST_ID, requestID)
+	msg.Header.Set(HEADER_KEY_CLIENT_ID, c.id.String())
+	msg.Header.Set(HEADER_KEY_REQUEST_ID, requestKeyFromCtx(ctx))
+	msg.Header.Set(HEADER_KEY_CALL_ID, callID)
 	msg.Data = payload
 
 	// Publish the message to the OPERATOR stream.
@@ -72,7 +74,7 @@ func (c *Client) Send(ctx context.Context, operator jetflow.OperatorProxy, messa
 
 	// Create a channel to receive the response.
 	responseChannel := make(chan jetflow.Result, 1)
-	c.responseChannels.Store(requestID, responseChannel)
+	c.responseChannels.Store(callID, responseChannel)
 	return responseChannel, nil
 }
 
@@ -123,11 +125,12 @@ func (c *Client) initStreams(ctx context.Context) error {
 }
 
 func (c *Client) initConsumer(ctx context.Context) error {
+	log.Println("Client.initConsumer")
 	consumer, err := c.jetstream.CreateOrUpdateConsumer(
 		ctx,
 		STREAM_NAME_CLIENT,
 		jetstream.ConsumerConfig{
-			Durable:       c.id.String(),
+			Durable:       "Client-" + c.id.String(),
 			AckPolicy:     jetstream.AckExplicitPolicy,
 			FilterSubject: fmt.Sprintf("%s.%s", STREAM_NAME_CLIENT, c.id.String()),
 		},
@@ -147,10 +150,11 @@ func (c *Client) initConsumer(ctx context.Context) error {
 func (c *Client) handleResponse(msg jetstream.Msg) {
 	// Load the request channel
 	header := msg.Headers()
-	requestID := header.Get(HEADER_KEY_REQUEST_ID)
-	rc, ok := c.responseChannels.LoadAndDelete(requestID)
+	callID := header.Get(HEADER_KEY_CALL_ID)
+	log.Println("Client.handleResponse callID:", callID)
+	rc, ok := c.responseChannels.LoadAndDelete(callID)
 	if !ok {
-		panic("requestID was not in responseChannels")
+		panic("callID (" + callID + ") was not in responseChannels")
 	}
 	responseChannel := rc.(chan jetflow.Result)
 	defer close(responseChannel)

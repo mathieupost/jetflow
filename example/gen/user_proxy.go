@@ -28,10 +28,6 @@ func (u *UserProxy) ID() string {
 	return u.OperatorID
 }
 
-func (u *UserProxy) Type() string {
-	return "User"
-}
-
 type Params_User_TransferBalance struct {
 	U2     *UserProxy
 	Amount int
@@ -46,6 +42,7 @@ func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount i
 	}
 
 	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+		Type:   "User",
 		Method: "TransferBalance",
 		Params: bytes,
 	})
@@ -71,6 +68,7 @@ func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
 	}
 
 	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+		Type:   "User",
 		Method: "AddBalance",
 		Params: bytes,
 	})
