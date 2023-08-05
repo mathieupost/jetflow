@@ -52,9 +52,16 @@ func TestClientSend(t *testing.T) {
 	err = client.Find(ctx, "user2", &user2)
 	require.NoError(t, err)
 
-	// Call function on user1.
-	err = user1.TransferBalance(ctx, user2, 1)
-	require.NoError(t, err)
+	for i := 0; i < 100; i++ {
+		t.Run(fmt.Sprintf("TransferBalance %d", i), func(t *testing.T) {
+			t.Parallel()
+			// Call function
+			err = user1.TransferBalance(ctx, user2, 1)
+			require.NoError(t, err)
+			err = user2.TransferBalance(ctx, user1, 1)
+			require.NoError(t, err)
+		})
+	}
 }
 
 func initJetStream(t *testing.T, ctx context.Context) jetstream.JetStream {
