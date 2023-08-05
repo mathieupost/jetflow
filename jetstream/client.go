@@ -106,16 +106,18 @@ func (c *Client) Find(ctx context.Context, id string, operator interface{}) erro
 
 func (c *Client) initStreams(ctx context.Context) error {
 	_, err := c.jetstream.CreateStream(ctx, jetstream.StreamConfig{
-		Name:     STREAM_NAME_CLIENT,
-		Subjects: []string{STREAM_NAME_CLIENT + ".*"},
+		Name:      STREAM_NAME_CLIENT,
+		Subjects:  []string{STREAM_NAME_CLIENT + ".*"},
+		Retention: jetstream.WorkQueuePolicy,
 	})
 	if err != nil {
 		return errors.Wrap(err, "create client stream")
 	}
 
 	_, err = c.jetstream.CreateStream(ctx, jetstream.StreamConfig{
-		Name:     STREAM_NAME_OPERATOR,
-		Subjects: []string{STREAM_NAME_OPERATOR + ".*.*"},
+		Name:      STREAM_NAME_OPERATOR,
+		Subjects:  []string{STREAM_NAME_OPERATOR + ".*.*"},
+		Retention: jetstream.WorkQueuePolicy,
 	})
 	if err != nil {
 		return errors.Wrap(err, "create operator stream")
