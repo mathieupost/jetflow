@@ -19,7 +19,6 @@ type Consumer struct {
 	jetstream jetstream.JetStream
 	client    *Client
 	storage   jetflow.Storage
-	inbox     chan jetstream.Msg
 }
 
 func NewConsumer(ctx context.Context, jetstream jetstream.JetStream, client *Client, storage jetflow.Storage) (*Consumer, error) {
@@ -51,32 +50,22 @@ func (c *Consumer) initConsumer(ctx context.Context) error {
 	}
 	log.Println("Consumer.initConsumer", consumer.CachedInfo().Name)
 
-	// Setup a channel to receive messages from the JetStream server.
-	c.inbox = make(chan jetstream.Msg, 100)
 	_, err = consumer.Consume(func(msg jetstream.Msg) {
-		log.Println("Consumer.consume put in inbox")
-		c.inbox <- msg
+		go c.handleOperatorCall(msg)
 	})
 	if err != nil {
-		return errors.Wrap(err, "init message consumer")
+		return errors.Wrap(err, "execute consumer")
 	}
-
-	// Handle messages from the JetStream server.
-	go func() {
-		for msg := range c.inbox {
-			c.handleOperatorCall(msg)
-		}
-	}()
 
 	return nil
 }
 
 func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
-	log.Println("Consumer.handleOperatorCall")
 	headers := msg.Headers()
 	clientID := headers.Get(HEADER_KEY_CLIENT_ID)
 	requestID := headers.Get(HEADER_KEY_REQUEST_ID)
 	callID := headers.Get(HEADER_KEY_CALL_ID)
+	log.Println("Consumer.handleOperatorCall", callID)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -86,18 +75,18 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	var call jetflow.OperatorCall
 	err := json.Unmarshal(msg.Data(), &call)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err.Error(), msg.Data())
 	}
 	msg.Ack()
 
 	operatorID := call.ID
 	operatorType := call.Type
 	operator, err := c.storage.GetOperator(ctx, operatorType, operatorID, requestID)
-	result := operator.Call(ctx, call)
+	result := operator.Call(ctx, c.client, call)
 
 	data, err := json.Marshal(result)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err.Error(), result)
 	}
 
 	// Send back to the caller.
@@ -106,7 +95,7 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	res.Data = data
 	_, err = c.jetstream.PublishMsg(ctx, res)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err.Error())
 	}
 	log.Println("Consumer published msg", res.Subject)
 }
