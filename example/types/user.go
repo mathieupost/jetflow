@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"log"
 
 	"github.com/pkg/errors"
 
@@ -15,7 +16,7 @@ type User interface {
 }
 
 func NewUser(id string) User {
-	return &user{id: id}
+	return &user{id: id, balance: 10}
 }
 
 type user struct {
@@ -28,6 +29,7 @@ func (u *user) ID() string {
 }
 
 func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err error) {
+	log.Println("user(" + u.id + ").TransferBalance")
 	if amount < 0 {
 		return errors.New("negative amount")
 	}
@@ -50,6 +52,7 @@ func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err er
 }
 
 func (u *user) AddBalance(ctx context.Context, amount int) error {
+	log.Println("user(" + u.id + ").AddBalance")
 	u.balance += amount
 
 	return nil
