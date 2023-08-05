@@ -54,11 +54,6 @@ type OperatorCall struct {
 	Params []byte
 }
 
-type Result struct {
-	Error  error
-	Values []byte
-}
-
 type Storage interface {
 	GetOperator(ctx context.Context, otype string, oid string, requestID string) (OperatorHandler, error)
 }
