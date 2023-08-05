@@ -50,7 +50,7 @@ func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping jetfl
 
 func (c *Client) Send(ctx context.Context, operator jetflow.Operator, message jetflow.OperatorCall) (chan jetflow.Result, error) {
 	callID := uuid.NewString()
-	log.Println("Client.Send", message.Type, operator.ID(), message.Method, string(message.Params))
+	log.Println("Client.Send", callID, message.Type, operator.ID(), message.Method, string(message.Params))
 
 	// Marshal the message
 	payload, err := json.Marshal(message)
@@ -153,10 +153,10 @@ func (c *Client) handleResponse(msg jetstream.Msg) {
 	// Load the request channel
 	header := msg.Headers()
 	callID := header.Get(HEADER_KEY_CALL_ID)
-	log.Println("Client.handleResponse callID:", callID)
+	log.Println("Client("+c.id.String()+").handleResponse callID:", callID)
 	rc, ok := c.responseChannels.LoadAndDelete(callID)
 	if !ok {
-		panic("callID (" + callID + ") was not in responseChannels")
+		log.Fatalln("UNEXPECTED RESPONSE:", callID)
 	}
 	responseChannel := rc.(chan jetflow.Result)
 	defer close(responseChannel)
@@ -165,7 +165,7 @@ func (c *Client) handleResponse(msg jetstream.Msg) {
 	var result jetflow.Result
 	err := json.Unmarshal(msg.Data(), &result)
 	if err != nil {
-		msg.Nak()
+		log.Println("could not unmarshal Result:", err, string(msg.Data()))
 		responseChannel <- jetflow.Result{
 			Error: errors.Wrap(err, "unmarshal result"),
 		}

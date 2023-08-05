@@ -39,6 +39,6 @@ func (m *mockStorage) GetOperator(ctx context.Context, otype string, oid string,
 
 type mockOperatorHandler struct{}
 
-func (m *mockOperatorHandler) Call(ctx context.Context, msg jetflow.OperatorCall) jetflow.Result {
+func (m *mockOperatorHandler) Call(ctx context.Context, client jetflow.Client, msg jetflow.OperatorCall) jetflow.Result {
 	return jetflow.Result{}
 }

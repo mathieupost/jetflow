@@ -16,11 +16,11 @@ var _ types.User = (*UserProxy)(nil)
 
 type UserProxy struct {
 	OperatorID string
-	Client     jetflow.Client
+	client     jetflow.Client
 }
 
 func NewUserProxy(id string, client jetflow.Client) reflect.Value {
-	proxy := &UserProxy{OperatorID: id, Client: client}
+	proxy := &UserProxy{OperatorID: id, client: client}
 	return reflect.ValueOf(proxy)
 }
 
@@ -41,7 +41,7 @@ func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount i
 		return errors.Wrap(err, "marshal params")
 	}
 
-	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+	resultChannel, err := u.client.Send(ctx, u, jetflow.OperatorCall{
 		ID:     u.OperatorID,
 		Type:   "User",
 		Method: "TransferBalance",
@@ -68,7 +68,7 @@ func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
 		return errors.Wrap(err, "marshal params")
 	}
 
-	resultChannel, err := u.Client.Send(ctx, u, jetflow.OperatorCall{
+	resultChannel, err := u.client.Send(ctx, u, jetflow.OperatorCall{
 		ID:     u.OperatorID,
 		Type:   "User",
 		Method: "AddBalance",

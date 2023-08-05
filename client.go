@@ -25,7 +25,7 @@ type OperatorProxy interface {
 // It will convert an OperatorCall to a method call and convert the result to
 // a Result struct.
 type OperatorHandler interface {
-	Call(ctx context.Context, msg OperatorCall) Result
+	Call(ctx context.Context, client Client, msg OperatorCall) Result
 }
 
 // Client initializes OperatorProxies and publishes their OperatorCalls.

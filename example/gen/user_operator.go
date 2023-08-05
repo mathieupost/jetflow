@@ -3,6 +3,7 @@ package gen
 import (
 	"context"
 	"encoding/json"
+	"log"
 
 	"github.com/pkg/errors"
 
@@ -21,7 +22,8 @@ func NewUserHandler(id string) *UserHandler {
 	return &UserHandler{user}
 }
 
-func (o *UserHandler) Call(ctx context.Context, msg jetflow.OperatorCall) jetflow.Result {
+func (o *UserHandler) Call(ctx context.Context, client jetflow.Client, msg jetflow.OperatorCall) jetflow.Result {
+	log.Println("UserHandler.Call:", msg.ID, msg.Method, string(msg.Params))
 	switch msg.Method {
 
 	case "TransferBalance":
@@ -32,6 +34,7 @@ func (o *UserHandler) Call(ctx context.Context, msg jetflow.OperatorCall) jetflo
 				Error: errors.Wrap(err, "unmarshal params"),
 			}
 		}
+		params.U2.client = client
 		err = o.user.TransferBalance(ctx, params.U2, params.Amount)
 		return jetflow.Result{
 			Error: err,
