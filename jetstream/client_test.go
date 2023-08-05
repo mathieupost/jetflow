@@ -2,10 +2,12 @@ package jetstream
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
@@ -30,11 +32,10 @@ func TestClientFind(t *testing.T) {
 
 func TestClientSend(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+	t.Cleanup(cancel)
 
 	// Setup jetstream
-	js, clear := initJetStream(t, ctx)
-	defer clear()
+	js := initJetStream(t, ctx)
 	client := initClient(t, ctx, js)
 
 	// Setup consumer
@@ -56,53 +57,27 @@ func TestClientSend(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func initJetStream(t *testing.T, ctx context.Context) (js jetstream.JetStream, clear func()) {
-	log.Println("initJetStream")
-
-	nc, err := nats.Connect("0.0.0.0:4222")
+func initJetStream(t *testing.T, ctx context.Context) jetstream.JetStream {
+	// Setup a NATS server with JetStream enabled.
+	opts := server.Options{
+		JetStream: true,
+		StoreDir:  t.TempDir(),
+		Port:      server.RANDOM_PORT,
+	}
+	s, err := server.NewServer(&opts)
+	require.NoError(t, err)
+	s.ConfigureLogger()
+	err = server.Run(s)
 	require.NoError(t, err)
 
-	js, err = jetstream.New(nc)
+	nc, err := nats.Connect(fmt.Sprintf("0.0.0.0:%d", opts.Port))
 	require.NoError(t, err)
 
-	clear = func() {
-		clearJetStream(t, ctx, js)
-	}
+	js, err := jetstream.New(nc)
+	require.NoError(t, err)
 
-	return js, clear
-}
-
-func clearJetStream(t *testing.T, ctx context.Context, js jetstream.JetStream) {
-	log.Println("clearJetStream")
-
-	// Clear all streams.
-	streamNameList := js.StreamNames(ctx)
-	for name := range streamNameList.Name() {
-		log.Println("clearStream", name)
-
-		stream, err := js.Stream(ctx, name)
-		require.NoError(t, err)
-
-		// Purge all messages.
-		err = stream.Purge(ctx)
-		require.NoError(t, err)
-
-		// Delete all consumers.
-		consumerNameList := stream.ConsumerNames(ctx)
-		for consumer := range consumerNameList.Name() {
-			log.Println("DeleteConsumer", consumer)
-			err = stream.DeleteConsumer(ctx, consumer)
-			require.NoError(t, err)
-			log.Println("done DeleteConsumer", consumer)
-		}
-
-		// Delete the stream.
-		err = js.DeleteStream(ctx, name)
-		require.NoError(t, err)
-		log.Println("done DeleteStream", name)
-	}
-
-	log.Println("done clearJetStream")
+	t.Cleanup(s.Shutdown)
+	return js
 }
 
 func initClient(t *testing.T, ctx context.Context, js jetstream.JetStream) *Client {
