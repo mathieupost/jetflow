@@ -81,8 +81,26 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 
 	operatorID := call.ID
 	operatorType := call.Type
-	operator, err := c.storage.Get(ctx, operatorType, operatorID, requestID)
-	result := operator.Call(ctx, c.client, call)
+
+	var retries int
+	var success bool
+	var result jetflow.Result
+	for !success {
+		log.Println("Consumer.handleOperatorCall retries:", retries)
+		retries++
+
+		operator := c.storage.Get(ctx, operatorType, operatorID, requestID)
+		result = operator.Call(ctx, c.client, call)
+
+		// TODO ONLY if clientID was the original clientID, we should PREPARE and
+		// COMMIT this and the other operators.
+		success = c.storage.Prepare(ctx, operatorType, operatorID, requestID)
+		if !success {
+			continue
+		}
+
+		success = c.storage.Commit(ctx, operatorType, operatorID, requestID)
+	}
 
 	data, err := json.Marshal(result)
 	if err != nil {
