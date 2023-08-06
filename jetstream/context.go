@@ -16,11 +16,11 @@ func ctxWithInitialCallID(ctx context.Context, id string) context.Context {
 }
 
 func initialCallIDFromCtx(ctx context.Context, currentID string) string {
-	initialCallID, ok := ctx.Value(initialCallID).(*string)
-	if !ok || initialCallID == nil {
+	initialCallID, ok := ctx.Value(initialCallID).(string)
+	if !ok {
 		return currentID
 	}
-	return *initialCallID
+	return initialCallID
 }
 
 // requestIDKey
@@ -31,9 +31,9 @@ func ctxWithRequestID(ctx context.Context, id string) context.Context {
 }
 
 func requestIDFromCtx(ctx context.Context) string {
-	requestID, ok := ctx.Value(requestIDKey).(*string)
-	if !ok || requestID == nil {
+	requestID, ok := ctx.Value(requestIDKey).(string)
+	if !ok {
 		return uuid.NewString()
 	}
-	return *requestID
+	return requestID
 }
