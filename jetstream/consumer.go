@@ -64,12 +64,14 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	headers := msg.Headers()
 	clientID := headers.Get(HEADER_KEY_CLIENT_ID)
 	requestID := headers.Get(HEADER_KEY_REQUEST_ID)
+	initialCallID := headers.Get(HEADER_KEY_INITIAL_CALL_ID)
 	callID := headers.Get(HEADER_KEY_CALL_ID)
 	log.Println("Consumer.handleOperatorCall", callID)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	ctx = ctxWithRequestID(ctx, requestID)
+	ctx = ctxWithInitialCallID(ctx, initialCallID)
 
 	// Unmarshal the method and parameters.
 	var call jetflow.OperatorCall
@@ -92,8 +94,9 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 		operator := c.storage.Get(ctx, operatorType, operatorID, requestID)
 		result = operator.Call(ctx, c.client, call)
 
-		// TODO ONLY if clientID was the original clientID, we should PREPARE and
-		// COMMIT this and the other operators.
+		if callID == initialCallID {
+			// TODO prepare and commit all operators involved in this request.
+		}
 		success = c.storage.Prepare(ctx, operatorType, operatorID, requestID)
 		if !success {
 			continue

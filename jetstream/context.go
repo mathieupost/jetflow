@@ -6,15 +6,31 @@ import (
 	"github.com/google/uuid"
 )
 
-type ctxKey int
+type ctxKey string
 
-var requestIDKey ctxKey
+// initialCallID
+var initialCallID ctxKey = HEADER_KEY_INITIAL_CALL_ID
+
+func ctxWithInitialCallID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, initialCallID, id)
+}
+
+func initialCallIDFromCtx(ctx context.Context, currentID string) string {
+	initialCallID, ok := ctx.Value(initialCallID).(*string)
+	if !ok || initialCallID == nil {
+		return currentID
+	}
+	return *initialCallID
+}
+
+// requestIDKey
+var requestIDKey ctxKey = HEADER_KEY_REQUEST_ID
 
 func ctxWithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, requestIDKey, id)
 }
 
-func requestKeyFromCtx(ctx context.Context) string {
+func requestIDFromCtx(ctx context.Context) string {
 	requestID, ok := ctx.Value(requestIDKey).(*string)
 	if !ok || requestID == nil {
 		return uuid.NewString()

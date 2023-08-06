@@ -20,9 +20,10 @@ const (
 	STREAM_NAME_CLIENT   = "CLIENT"
 	STREAM_NAME_OPERATOR = "OPERATOR"
 
-	HEADER_KEY_CLIENT_ID  = "CLIENT_ID"
-	HEADER_KEY_REQUEST_ID = "REQUEST_ID"
-	HEADER_KEY_CALL_ID    = "CALL_ID"
+	HEADER_KEY_CLIENT_ID       = "CLIENT_ID"
+	HEADER_KEY_REQUEST_ID      = "REQUEST_ID"
+	HEADER_KEY_INITIAL_CALL_ID = "INITIAL_CALL_ID"
+	HEADER_KEY_CALL_ID         = "CALL_ID"
 )
 
 var _ jetflow.Client = (*Client)(nil)
@@ -62,7 +63,8 @@ func (c *Client) Send(ctx context.Context, operator jetflow.Operator, message je
 	subject := fmt.Sprintf("%s.%s.%s", STREAM_NAME_OPERATOR, message.Type, operator.ID())
 	msg := nats.NewMsg(subject)
 	msg.Header.Set(HEADER_KEY_CLIENT_ID, c.id.String())
-	msg.Header.Set(HEADER_KEY_REQUEST_ID, requestKeyFromCtx(ctx))
+	msg.Header.Set(HEADER_KEY_REQUEST_ID, requestIDFromCtx(ctx))
+	msg.Header.Set(HEADER_KEY_INITIAL_CALL_ID, initialCallIDFromCtx(ctx, callID))
 	msg.Header.Set(HEADER_KEY_CALL_ID, callID)
 	msg.Data = payload
 
