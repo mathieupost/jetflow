@@ -55,5 +55,5 @@ type OperatorCall struct {
 }
 
 type Storage interface {
-	GetOperator(ctx context.Context, otype string, oid string, requestID string) (OperatorHandler, error)
+	Get(ctx context.Context, otype string, oid string, requestID string) (OperatorHandler, error)
 }

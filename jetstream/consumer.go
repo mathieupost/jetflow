@@ -81,7 +81,7 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 
 	operatorID := call.ID
 	operatorType := call.Type
-	operator, err := c.storage.GetOperator(ctx, operatorType, operatorID, requestID)
+	operator, err := c.storage.Get(ctx, operatorType, operatorID, requestID)
 	result := operator.Call(ctx, c.client, call)
 
 	data, err := json.Marshal(result)

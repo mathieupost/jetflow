@@ -23,7 +23,7 @@ func NewUserHandler(id string) jetflow.OperatorHandler {
 }
 
 func (o *UserHandler) Call(ctx context.Context, client jetflow.Client, msg jetflow.OperatorCall) jetflow.Result {
-	log.Println("UserHandler.Call:", msg.ID, msg.Method, string(msg.Params))
+	log.Println("UserHandler.Call:", msg.ID, msg.Method, string(msg.Params), o.user)
 	switch msg.Method {
 
 	case "TransferBalance":
