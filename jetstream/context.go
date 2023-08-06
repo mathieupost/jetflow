@@ -37,3 +37,30 @@ func requestIDFromCtx(ctx context.Context) string {
 	}
 	return requestID
 }
+
+// involvedOperatorsKey
+var involvedOperatorsKey ctxKey = HEADER_KEY_INVOLVED_OPERATORS
+
+// ctxAddInvolvedOperators adds the given operators to the existing involvedOperatorsKey value.
+//
+// Sort of a hack to pass the involved operators to the subscriber.
+func ctxAddInvolvedOperators(ctx context.Context, operators ...string) context.Context {
+	value, ok := ctx.Value(involvedOperatorsKey).(*[]string)
+	if !ok {
+		value = &[]string{}
+		ctx = context.WithValue(ctx, involvedOperatorsKey, value)
+	}
+
+	newOperators := append(*value, operators...)
+	*value = newOperators
+
+	return ctx
+}
+
+func involvedOperatorsFromCtx(ctx context.Context) *[]string {
+	operators, ok := ctx.Value(involvedOperatorsKey).(*[]string)
+	if !ok || operators == nil {
+		return &[]string{}
+	}
+	return operators
+}

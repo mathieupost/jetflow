@@ -20,10 +20,11 @@ const (
 	STREAM_NAME_CLIENT   = "CLIENT"
 	STREAM_NAME_OPERATOR = "OPERATOR"
 
-	HEADER_KEY_CLIENT_ID       = "CLIENT_ID"
-	HEADER_KEY_REQUEST_ID      = "REQUEST_ID"
-	HEADER_KEY_INITIAL_CALL_ID = "INITIAL_CALL_ID"
-	HEADER_KEY_CALL_ID         = "CALL_ID"
+	HEADER_KEY_CLIENT_ID          = "CLIENT_ID"
+	HEADER_KEY_REQUEST_ID         = "REQUEST_ID"
+	HEADER_KEY_INITIAL_CALL_ID    = "INITIAL_CALL_ID"
+	HEADER_KEY_CALL_ID            = "CALL_ID"
+	HEADER_KEY_INVOLVED_OPERATORS = "INVOLVED_OPERATORS"
 )
 
 var _ jetflow.Client = (*Client)(nil)
@@ -33,6 +34,11 @@ type Client struct {
 	jetstream        jetstream.JetStream
 	mapping          jetflow.OperatorFactoryMapping
 	responseChannels sync.Map
+}
+
+type response struct {
+	ctx     context.Context
+	channel chan jetflow.Result
 }
 
 func NewClient(ctx context.Context, jetstream jetstream.JetStream, mapping jetflow.OperatorFactoryMapping) (*Client, error) {
@@ -66,6 +72,10 @@ func (c *Client) Send(ctx context.Context, operator jetflow.Operator, message je
 	msg.Header.Set(HEADER_KEY_REQUEST_ID, requestIDFromCtx(ctx))
 	msg.Header.Set(HEADER_KEY_INITIAL_CALL_ID, initialCallIDFromCtx(ctx, callID))
 	msg.Header.Set(HEADER_KEY_CALL_ID, callID)
+	involvedOperators := involvedOperatorsFromCtx(ctx)
+	for _, operator := range *involvedOperators {
+		msg.Header.Add(HEADER_KEY_INVOLVED_OPERATORS, operator)
+	}
 	msg.Data = payload
 
 	// Publish the message to the OPERATOR stream.
@@ -76,7 +86,10 @@ func (c *Client) Send(ctx context.Context, operator jetflow.Operator, message je
 
 	// Create a channel to receive the response.
 	responseChannel := make(chan jetflow.Result, 1)
-	c.responseChannels.Store(callID, responseChannel)
+	c.responseChannels.Store(callID, &response{
+		ctx:     ctx,
+		channel: responseChannel,
+	})
 	return responseChannel, nil
 }
 
@@ -155,20 +168,22 @@ func (c *Client) handleResponse(msg jetstream.Msg) {
 	// Load the request channel
 	header := msg.Headers()
 	callID := header.Get(HEADER_KEY_CALL_ID)
+	involvedOperators := header.Values(HEADER_KEY_INVOLVED_OPERATORS)
 	log.Println("Client("+c.id.String()+").handleResponse callID:", callID)
-	rc, ok := c.responseChannels.LoadAndDelete(callID)
+	r, ok := c.responseChannels.LoadAndDelete(callID)
 	if !ok {
 		log.Fatalln("UNEXPECTED RESPONSE:", callID)
 	}
-	responseChannel := rc.(chan jetflow.Result)
-	defer close(responseChannel)
+	response := r.(*response)
+	ctxAddInvolvedOperators(response.ctx, involvedOperators...)
+	defer close(response.channel)
 
 	// Unmarshal the result
 	var result jetflow.Result
 	err := json.Unmarshal(msg.Data(), &result)
 	if err != nil {
 		log.Println("could not unmarshal Result:", err, string(msg.Data()))
-		responseChannel <- jetflow.Result{
+		response.channel <- jetflow.Result{
 			Error: errors.Wrap(err, "unmarshal result"),
 		}
 		return
@@ -181,5 +196,5 @@ func (c *Client) handleResponse(msg jetstream.Msg) {
 	}
 
 	// Send the result over the channel
-	responseChannel <- result
+	response.channel <- result
 }

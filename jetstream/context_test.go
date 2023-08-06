@@ -26,3 +26,25 @@ func TestCtxRequestIDKey(t *testing.T) {
 	actual := requestIDFromCtx(ctx)
 	require.Equal(t, expected, actual)
 }
+
+func TestCtxInvolvedOperatorsKey(t *testing.T) {
+	ctx := context.Background()
+
+	expected1 := "first"
+	ctx = ctxAddInvolvedOperators(ctx, expected1)
+
+	actual := involvedOperatorsFromCtx(ctx)
+	require.Len(t, *actual, 1)
+	require.Equal(t, expected1, (*actual)[0])
+
+	// Add some more.
+	expected2 := "second"
+	expected3 := "third"
+	ctx = ctxAddInvolvedOperators(ctx, expected2, expected3)
+
+	actual = involvedOperatorsFromCtx(ctx)
+	require.Len(t, *actual, 3)
+	require.Equal(t, expected1, (*actual)[0])
+	require.Equal(t, expected2, (*actual)[1])
+	require.Equal(t, expected3, (*actual)[2])
+}

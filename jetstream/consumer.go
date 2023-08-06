@@ -72,6 +72,7 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	defer cancel()
 	ctx = ctxWithRequestID(ctx, requestID)
 	ctx = ctxWithInitialCallID(ctx, initialCallID)
+	ctx = ctxAddInvolvedOperators(ctx, msg.Subject())
 
 	// Unmarshal the method and parameters.
 	var call jetflow.OperatorCall
@@ -113,10 +114,16 @@ func (c *Consumer) handleOperatorCall(msg jetstream.Msg) {
 	// Send back to the caller.
 	res := nats.NewMsg("CLIENT." + clientID)
 	res.Header.Set(HEADER_KEY_CALL_ID, callID)
+	involvedOperators := involvedOperatorsFromCtx(ctx)
+	for _, operator := range *involvedOperators {
+		res.Header.Add(HEADER_KEY_INVOLVED_OPERATORS, operator)
+	}
 	res.Data = data
 	_, err = c.jetstream.PublishMsg(ctx, res)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	log.Println("Consumer published msg", res.Subject)
+	if callID == initialCallID {
+		log.Println("Consumer published msg", res.Subject, "involvedOperators", involvedOperators)
+	}
 }
