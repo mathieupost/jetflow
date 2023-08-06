@@ -17,7 +17,7 @@ type UserHandler struct {
 	user types.User
 }
 
-func NewUserHandler(id string) *UserHandler {
+func NewUserHandler(id string) jetflow.OperatorHandler {
 	user := types.NewUser(id)
 	return &UserHandler{user}
 }

@@ -12,8 +12,10 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/example/gen"
 	"github.com/mathieupost/jetflow/example/types"
+	"github.com/mathieupost/jetflow/storage/memory"
 )
 
 func TestClientFind(t *testing.T) {
@@ -39,7 +41,9 @@ func TestClientSend(t *testing.T) {
 	client := initClient(t, ctx, js)
 
 	// Setup consumer
-	storage := &mockStorage{}
+	storage := memory.NewStorage(map[string]func(id string) jetflow.OperatorHandler{
+		"User": gen.NewUserHandler,
+	})
 	_, err := NewConsumer(ctx, js, client, storage)
 	require.NoError(t, err)
 
