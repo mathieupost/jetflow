@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +18,7 @@ import (
 const (
 	HEADER_KEY_MESSAGE_TYPE         = "MESSAGE_TYPE"
 	HEADER_KEY_TRANSACTION_OPERATOR = "TRANSACTION_OPERATOR"
+	HEADER_KEY_VOTER                = "VOTER"
 
 	MESSAGE_TYPE_OPERATOR_CALL = ""
 	MESSAGE_TYPE_PREPARE       = "PREPARE"
@@ -165,7 +167,34 @@ func (c *Consumer) prepareOperators(involvedOperators []string) {
 }
 
 func (c *Consumer) handlePrepare(msg jetstream.Msg) {
-	// TODO handle prepare message and respond with a vote.
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	requestID := msg.Headers().Get(HEADER_KEY_REQUEST_ID)
+	transactionOperator := msg.Headers().Get(HEADER_KEY_TRANSACTION_OPERATOR)
+
+	subject := msg.Subject()
+	subjectSplit := strings.Split(subject, ".")
+	operatorType := subjectSplit[1]
+	operatorID := subjectSplit[2]
+
+	prepared := c.storage.Prepare(ctx, operatorType, operatorID, requestID)
+	var messageType string
+	if prepared {
+		messageType = MESSAGE_TYPE_VOTE_YES
+	} else {
+		messageType = MESSAGE_TYPE_VOTE_NO
+	}
+
+	voteMsg := nats.NewMsg(transactionOperator)
+	voteMsg.Header.Set(HEADER_KEY_REQUEST_ID, requestID)
+	voteMsg.Header.Set(HEADER_KEY_MESSAGE_TYPE, messageType)
+	voteMsg.Header.Set(HEADER_KEY_VOTER, subject)
+
+	_, err := c.jetstream.PublishMsg(ctx, voteMsg)
+	if err == nil {
+		log.Fatalln("Consumer.handlePrepare", err.Error())
+	}
 }
 
 func (c *Consumer) handleVoteYes(msg jetstream.Msg) {
