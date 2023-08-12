@@ -3,59 +3,71 @@ package jetflow
 import (
 	"context"
 	"reflect"
+
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
-// Operator is the minimal interface for all operators.
-type Operator interface {
-	ID() string
+var _ OperatorClient = (*Client)(nil)
+
+type Client struct {
+	id         string
+	mapping    ProxyFactoryMapping
+	dispatcher Dispatcher
 }
 
-// OperatorProxy is a proxy which forwards calls to an operator.
-//
-// It should also implement the methods of a Operator implementation. These
-// methods will then convert the method call to an OperatorCall to be send by
-// a Client.
-type OperatorProxy interface {
-	Operator
-	Type() string
+func NewClient(mapping ProxyFactoryMapping, dispatcher Dispatcher) *Client {
+	id := uuid.NewString()
+	id = id[len(id)-12:]
+	return &Client{
+		id:         id,
+		mapping:    mapping,
+		dispatcher: dispatcher,
+	}
 }
 
-// OperatorHandler handles calls to the methods of an operator.
-//
-// It will convert an OperatorCall to a method call and convert the result to
-// a Result struct.
-type OperatorHandler interface {
-	Call(ctx context.Context, client Client, msg OperatorCall) Result
+func (c *Client) Call(ctx context.Context, call Request) (res []byte, err error) {
+	callID := uuid.NewString()
+	callID = callID[len(callID)-12:]
+	call.ClientID = c.id
+	call.OperationID = OperationIDFromContext(ctx, callID)
+	call.RequestID = callID
+
+	replyChan, err := c.dispatcher.Dispatch(ctx, call)
+	if err != nil {
+		return nil, errors.Wrap(err, "dispatching request")
+	}
+
+	select {
+	case reply := <-replyChan:
+		return reply.Values, errors.Wrap(reply.Error, "dispatch call")
+	case <-ctx.Done():
+		return nil, errors.Wrap(ctx.Err(), "dispatch call")
+	}
 }
 
-// Client initializes OperatorProxies and publishes their OperatorCalls.
-//
-// It creates OperatorProxies for each operator and sends their OperatorCalls
-// to the right OperatorHandlers, which may also use OperatorProxies for
-// operator methods that receive operators in their parameters.
-type Client interface {
-	Find(ctx context.Context, id string, operator interface{}) error
-	Send(context.Context, Operator, OperatorCall) (chan Result, error)
-}
+func (c *Client) Find(ctx context.Context, id string, operator interface{}) error {
+	value := reflect.ValueOf(operator)
+	if value.Kind() != reflect.Pointer {
+		return errors.New("operator must be a pointer")
+	}
 
-// OperatorFactoryMapping maps type names to OperatorFactories.
-type OperatorFactoryMapping map[string]OperatorFactory
+	value = value.Elem()
+	if value.Kind() != reflect.Interface {
+		return errors.New("operator must be an interface")
+	}
 
-// OperatorFactory instantiates a ProxyOperator value.
-//
-// Used by the Client to instantiate an operator to a ProxyOperator, so method
-// calls can be proxied to the actual implementation.
-type OperatorFactory func(id string, client Client) reflect.Value
+	if value.Elem().Kind() != reflect.Invalid {
+		return errors.New("operator already initalized")
+	}
 
-type OperatorCall struct {
-	ID     string
-	Type   string
-	Method string
-	Params []byte
-}
+	name := value.Type().Name()
+	factory, ok := c.mapping[name]
+	if !ok {
+		return errors.Errorf("operator '%s' not found", name)
+	}
+	operator = factory(id, c)
+	value.Set(reflect.ValueOf(operator))
 
-type Storage interface {
-	Get(ctx context.Context, otype string, oid string, requestID string) OperatorHandler
-	Prepare(ctx context.Context, otype string, oid string, requestID string) bool
-	Commit(ctx context.Context, otype string, oid string, requestID string) bool
+	return nil
 }

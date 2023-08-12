@@ -3,8 +3,6 @@ package gen
 import (
 	"context"
 	"encoding/json"
-	"log"
-	"reflect"
 
 	"github.com/pkg/errors"
 
@@ -12,73 +10,71 @@ import (
 	"github.com/mathieupost/jetflow/example/types"
 )
 
-var _ types.User = (*UserProxy)(nil)
+var (
+	_ types.User       = (*UserProxy)(nil)
+	_ jetflow.Operator = (*UserProxy)(nil)
+)
 
 type UserProxy struct {
-	OperatorID string
-	client     jetflow.Client
+	id     string
+	client jetflow.OperatorClient
 }
 
-func NewUserProxy(id string, client jetflow.Client) reflect.Value {
-	proxy := &UserProxy{OperatorID: id, client: client}
-	return reflect.ValueOf(proxy)
+func NewUserProxy(id string, client jetflow.OperatorClient) jetflow.Operator {
+	return &UserProxy{id: id, client: client}
 }
 
 func (u *UserProxy) ID() string {
-	return u.OperatorID
+	return u.id
 }
 
-type Params_User_TransferBalance struct {
+type User_TransferBalance_Args struct {
 	U2     *UserProxy
 	Amount int
 }
 
 func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount int) error {
-	log.Println("UserProxy.TransferBalance")
-	params := Params_User_TransferBalance{U2: u2.(*UserProxy), Amount: amount}
-	bytes, err := json.Marshal(params)
+	args := User_TransferBalance_Args{u2.(*UserProxy), amount}
+	data, err := json.Marshal(args)
 	if err != nil {
-		return errors.Wrap(err, "marshal params")
+		return errors.Wrap(err, "marshalling TransferBalance args")
 	}
-
-	resultChannel, err := u.client.Send(ctx, u, jetflow.OperatorCall{
-		ID:     u.OperatorID,
-		Type:   "User",
+	call := jetflow.Request{
+		Name:   "User",
+		ID:     u.id,
 		Method: "TransferBalance",
-		Params: bytes,
-	})
-	if err != nil {
-		return errors.Wrap(err, "send TransferBalance")
+		Args:   data,
 	}
-
-	// Get result
-	res := <-resultChannel
-	return errors.Wrap(res.Error, "get result TransferBalance")
+	_, err = u.client.Call(ctx, call)
+	return errors.Wrap(err, "call client UserProxy.TransferBalance")
 }
 
-type Params_User_AddBalance struct {
+type User_AddBalance_Args struct {
 	Amount int
 }
 
 func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
-	log.Println("UserProxy.AddBalance")
-	params := Params_User_AddBalance{Amount: amount}
-	bytes, err := json.Marshal(params)
+	args := User_AddBalance_Args{amount}
+	data, err := json.Marshal(args)
 	if err != nil {
-		return errors.Wrap(err, "marshal params")
+		return errors.Wrap(err, "marshalling TransferBalance args")
 	}
-
-	resultChannel, err := u.client.Send(ctx, u, jetflow.OperatorCall{
-		ID:     u.OperatorID,
-		Type:   "User",
+	call := jetflow.Request{
+		Name:   "User",
+		ID:     u.id,
 		Method: "AddBalance",
-		Params: bytes,
-	})
-	if err != nil {
-		return errors.Wrap(err, "send AddBalance")
+		Args:   data,
 	}
+	_, err = u.client.Call(ctx, call)
+	return errors.Wrap(err, "call client UserProxy.AddBalance")
+}
 
-	// Get result
-	res := <-resultChannel
-	return errors.Wrap(res.Error, "get result AddBalance")
+// MarshalJSON implements json.Marshaler.
+func (u UserProxy) MarshalJSON() ([]byte, error) {
+	return json.Marshal(u.id)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *UserProxy) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &u.id)
 }

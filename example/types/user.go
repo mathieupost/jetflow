@@ -2,7 +2,6 @@ package types
 
 import (
 	"context"
-	"log"
 
 	"github.com/pkg/errors"
 
@@ -19,17 +18,19 @@ func NewUser(id string) User {
 	return &user{id: id, balance: 10}
 }
 
+var _ jetflow.Operator = (*user)(nil)
+
 type user struct {
 	id      string
 	balance int
 }
 
+// ID implements jetflow.Operator interface.
 func (u *user) ID() string {
 	return u.id
 }
 
 func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err error) {
-	log.Println("user(" + u.id + ").TransferBalance")
 	if amount < 0 {
 		return errors.New("negative amount")
 	}
@@ -52,7 +53,6 @@ func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err er
 }
 
 func (u *user) AddBalance(ctx context.Context, amount int) error {
-	log.Println("user(" + u.id + ").AddBalance")
 	u.balance += amount
 
 	return nil

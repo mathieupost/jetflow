@@ -11,7 +11,7 @@ import (
 )
 
 type Storage struct {
-	typeHandlerMapping     map[string]func(id string) jetflow.OperatorHandler
+	typeHandlerMapping     jetflow.HandlerFactoryMapping
 	keyVersionMapping      sync.Map
 	versionOperatorMapping sync.Map
 }
@@ -22,31 +22,35 @@ type version struct {
 	prepared string
 }
 
-func NewStorage(mapping map[string]func(id string) jetflow.OperatorHandler) *Storage {
+func NewStorage(mapping jetflow.HandlerFactoryMapping) *Storage {
 	return &Storage{
 		typeHandlerMapping: mapping,
 	}
 }
 
-func (s *Storage) Get(ctx context.Context, otype string, oid string, requestID string) jetflow.OperatorHandler {
+func (s *Storage) Get(ctx context.Context, call jetflow.Request) jetflow.Handler {
+	return s.get(ctx, call.Name, call.ID, call.OperationID)
+}
+
+func (s *Storage) get(ctx context.Context, name string, id string, req string) jetflow.Handler {
 	// Get last committed value. Create a new value if not found.
-	operatorKey := otype + "." + oid
-	requestOperatorKey := operatorKey + "." + requestID
-	log.Println("Storage.Get", requestOperatorKey)
+	operatorKey := name + "." + id
+	requestOperatorKey := operatorKey + "." + req
+	log.Println(req, "Storage.Get", requestOperatorKey)
 
 	// Load the operator version for the current request.
 	operator, ok := s.versionOperatorMapping.Load(requestOperatorKey)
 	if !ok {
-		log.Println("Storage.Get clone", requestOperatorKey)
+		log.Println(req, "Storage.Get clone", requestOperatorKey)
 		// Clone the committed version if there was no previous version for this request.
 		committedVersion := s.loadOrCreateVersion(operatorKey)
 		operator, ok = s.versionOperatorMapping.Load(committedVersion.key)
 		if !ok {
-			log.Println("Storage.Get create", requestOperatorKey)
+			log.Println(req, "Storage.Get create", requestOperatorKey)
 			// Create an initial instance of the operator if it did not yet exist.
 			operator, _ = s.versionOperatorMapping.LoadOrStore(
 				committedVersion.key,
-				s.typeHandlerMapping[otype](oid),
+				s.typeHandlerMapping[name](id),
 			)
 		}
 		// Store the operator version for the current request.
@@ -58,27 +62,23 @@ func (s *Storage) Get(ctx context.Context, otype string, oid string, requestID s
 		})
 	}
 
-	return operator.(jetflow.OperatorHandler)
+	return operator.(jetflow.Handler)
 }
 
-func (s *Storage) Prepare(ctx context.Context, otype string, oid string, requestID string) (ok bool) {
-	log.Println("Storage.Prepare", otype, oid, requestID)
+func (s *Storage) Prepare(ctx context.Context, call jetflow.Request) (ok bool) {
+	return s.prepare(ctx, call.Name, call.ID, call.OperationID)
+}
 
-	operatorKey := otype + "." + oid
-	requestOperatorKey := operatorKey + "." + requestID
+func (s *Storage) prepare(ctx context.Context, name string, id string, req string) (ok bool) {
+	log.Println(req, "Storage.Prepare", name, id, req)
+
+	operatorKey := name + "." + id
+	requestOperatorKey := operatorKey + "." + req
 	committedVersion := s.loadVersion(operatorKey)
-
-	defer func() {
-		if !ok {
-			log.Println("Storage.Prepare FAILED", operatorKey)
-			// Clean up
-			s.keyVersionMapping.Delete(requestOperatorKey)
-			s.versionOperatorMapping.Delete(requestOperatorKey)
-		}
-	}()
 
 	if committedVersion.prepared != "" {
 		// Already prepared by another request.
+		log.Println(req, "Storage.Prepare already prepared", committedVersion.prepared)
 		return false
 	}
 
@@ -88,45 +88,80 @@ func (s *Storage) Prepare(ctx context.Context, otype string, oid string, request
 	// from the committed version.
 	if requestVersion.base != committedVersion.key {
 		// A new version is already committed.
+		log.Println(req, "Storage.Prepare already new version", committedVersion.key)
 		return false
 	}
 
 	// Copy and set prepared to the version for the given request.
 	newCommittedVersion := committedVersion
 	newCommittedVersion.prepared = requestOperatorKey
-	return s.updateVersion(operatorKey, committedVersion, newCommittedVersion)
+	updated := s.updateVersion(operatorKey, committedVersion, newCommittedVersion)
+	log.Println(req, "Storage.Prepare old", committedVersion, "new", newCommittedVersion, "updated", updated)
+	return updated
 }
 
-func (s *Storage) Commit(ctx context.Context, otype string, oid string, requestID string) (ok bool) {
-	log.Println("Storage.Commit", otype, oid, requestID)
+func (s *Storage) Commit(ctx context.Context, call jetflow.Request) {
+	s.commit(ctx, call.Name, call.ID, call.OperationID)
+}
 
-	operatorKey := otype + "." + oid
-	requestOperatorKey := operatorKey + "." + requestID
+func (s *Storage) commit(ctx context.Context, name string, id string, req string) {
+	log.Println(req, "Storage.Commit", name, id, req)
+
+	operatorKey := name + "." + id
+	requestOperatorKey := operatorKey + "." + req
 	oldVersion := s.loadVersion(operatorKey)
 
-	defer func() {
-		if !ok {
-			log.Fatalln("Storage.Commit FAILED")
-		}
-		// Delete the request version mapping.
-		s.keyVersionMapping.Delete(requestOperatorKey)
-		// Delete the previous operator version.
-		s.versionOperatorMapping.Delete(oldVersion.key)
-	}()
-
 	if oldVersion.prepared != requestOperatorKey {
-		log.Println("Storage.Commit PREPARED BY OTHER REQUEST", otype, oid, requestID)
-		return false
+		log.Fatalln(req, "Storage.Commit PREPARED BY OTHER REQUEST", oldVersion.prepared, "!=", requestOperatorKey)
+		return
 	}
 
 	// Update the committed version to the prepared version.
 	newVersion := version{key: oldVersion.prepared}
-	return s.updateVersion(operatorKey, oldVersion, newVersion)
+	updated := s.updateVersion(operatorKey, oldVersion, newVersion)
+	if !updated {
+		log.Fatalln(req, "Storage.Commit UPDATE FAILED")
+	}
+
+	// Delete the request version mapping.
+	s.keyVersionMapping.Delete(requestOperatorKey)
+	// Delete the previous operator version.
+	s.versionOperatorMapping.Delete(oldVersion.key)
+}
+
+func (s *Storage) Rollback(ctx context.Context, call jetflow.Request) {
+	s.rollback(ctx, call.Name, call.ID, call.OperationID)
+}
+
+func (s *Storage) rollback(ctx context.Context, name string, id string, req string) {
+	log.Println(req, "Storage.Rollback", name, id, req)
+
+	operatorKey := name + "." + id
+	requestOperatorKey := operatorKey + "." + req
+
+	// Cleanup version.
+	s.keyVersionMapping.Delete(requestOperatorKey)
+	s.versionOperatorMapping.Delete(requestOperatorKey)
+
+	// Unprepare if needed.
+	committedVersion := s.loadVersion(operatorKey)
+	if committedVersion.prepared == requestOperatorKey {
+		newCommittedVersion := committedVersion
+		newCommittedVersion.prepared = ""
+		updated := s.updateVersion(operatorKey, committedVersion, newCommittedVersion)
+		if !updated {
+			log.Fatalln(req, "Storage.Rollback UPDATE FAILED")
+		}
+	}
 }
 
 func (s *Storage) loadVersion(key string) version {
 	v, _ := s.keyVersionMapping.Load(key)
-	return v.(version)
+	version, ok := v.(version)
+	if !ok {
+		log.Fatalln("Storage.loadVersion", key, "not found")
+	}
+	return version
 }
 
 func (s *Storage) loadOrCreateVersion(key string) version {
