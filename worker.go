@@ -47,14 +47,24 @@ func (w *Worker) processRequest(ctx context.Context, call Request) {
 
 	ctx = ContextWithOperationID(ctx, call.OperationID)
 
+	// (mis)use the context to keep track of the involved operators.
+	involvedOperators := map[string]map[string]bool{}
+	ctx = ContextWithInvolvedOperators(ctx, involvedOperators)
+	ContextAddInvolvedOperator(ctx, call.Name, call.ID)
+
+	response := Response{
+		RequestID:         call.RequestID,
+		InvolvedOperators: involvedOperators,
+	}
+	defer func() {
+		w.outbox <- response
+	}()
+
 	operator := w.storage.Get(ctx, call)
 	res, err := operator.Handle(ctx, w.client, call)
 	if err != nil {
 		log.Println("Worker handle call error:", err)
-		w.outbox <- Response{
-			RequestID: call.RequestID,
-			Error:     errors.Wrap(err, "handle operator call"),
-		}
+		response.Error = errors.Wrap(err, "handle operator call")
 		w.storage.Rollback(ctx, call)
 		return
 	}
@@ -62,8 +72,5 @@ func (w *Worker) processRequest(ctx context.Context, call Request) {
 	w.storage.Prepare(ctx, call)
 	w.storage.Commit(ctx, call)
 
-	w.outbox <- Response{
-		RequestID: call.RequestID,
-		Values:    res,
-	}
+	response.Values = res
 }

@@ -40,6 +40,12 @@ func (c *Client) Call(ctx context.Context, call Request) (res []byte, err error)
 
 	select {
 	case reply := <-replyChan:
+		// Mutate the ctx's involved operators.
+		for name, instances := range reply.InvolvedOperators {
+			for id := range instances {
+				ContextAddInvolvedOperator(ctx, name, id)
+			}
+		}
 		return reply.Values, errors.Wrap(reply.Error, "dispatch call")
 	case <-ctx.Done():
 		return nil, errors.Wrap(ctx.Err(), "dispatch call")
