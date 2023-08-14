@@ -43,8 +43,8 @@ type Dispatcher interface {
 }
 
 type Storage interface {
-	Get(ctx context.Context, call Request) Handler
-	Prepare(ctx context.Context, call Request) bool
-	Commit(ctx context.Context, call Request)
-	Rollback(ctx context.Context, call Request)
+	Get(ctx context.Context, call Request) (Handler, error)
+	Prepare(ctx context.Context, call Request) error
+	Commit(ctx context.Context, call Request) error
+	Rollback(ctx context.Context, call Request) error
 }

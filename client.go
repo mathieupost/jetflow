@@ -2,6 +2,7 @@ package jetflow
 
 import (
 	"context"
+	"log"
 	"reflect"
 
 	"github.com/google/uuid"
@@ -11,27 +12,24 @@ import (
 var _ OperatorClient = (*Client)(nil)
 
 type Client struct {
-	id         string
 	mapping    ProxyFactoryMapping
 	dispatcher Dispatcher
 }
 
 func NewClient(mapping ProxyFactoryMapping, dispatcher Dispatcher) *Client {
-	id := uuid.NewString()
-	id = id[len(id)-12:]
 	return &Client{
-		id:         id,
 		mapping:    mapping,
 		dispatcher: dispatcher,
 	}
 }
 
 func (c *Client) Call(ctx context.Context, call Request) (res []byte, err error) {
-	callID := uuid.NewString()
-	callID = callID[len(callID)-12:]
-	call.ClientID = c.id
-	call.OperationID = OperationIDFromContext(ctx, callID)
-	call.RequestID = callID
+	requestID := uuid.NewString()
+	requestID = requestID[len(requestID)-12:]
+	call.OperationID = OperationIDFromContext(ctx, requestID)
+	call.RequestID = requestID
+
+	log.Println("Client.Call:\n", call)
 
 	replyChan, err := c.dispatcher.Dispatch(ctx, call)
 	if err != nil {

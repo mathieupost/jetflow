@@ -1,16 +1,24 @@
 package jetflow
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
 )
 
+type Method string
+
+const (
+	MethodPrepare  Method = "__PREPARE__"
+	MethodCommit   Method = "__COMMIT__"
+	MethodRollback Method = "__ROLLBACK__"
+)
+
 type Request struct {
 	OperationID string
 	RequestID   string
-	ClientID    string
 
 	Name   string
 	ID     string
@@ -24,6 +32,15 @@ func (r Request) String() string {
 		r.OperationID, r.RequestID,
 		r.Name, r.ID, r.Method, string(r.Args),
 	)
+}
+
+func (r Request) Response(ctx context.Context, values []byte, err error) Response {
+	return Response{
+		RequestID:         r.RequestID,
+		InvolvedOperators: InvolvedOperatorsFromContext(ctx),
+		Values:            values,
+		Error:             err,
+	}
 }
 
 type Response struct {

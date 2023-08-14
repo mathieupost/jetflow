@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"log"
 	"sync"
 
@@ -28,25 +29,25 @@ func NewStorage(mapping jetflow.HandlerFactoryMapping) *Storage {
 	}
 }
 
-func (s *Storage) Get(ctx context.Context, call jetflow.Request) jetflow.Handler {
-	return s.get(ctx, call.Name, call.ID, call.OperationID)
+func (s *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.Handler, error) {
+	log.Println("Storage.Get\n", call)
+	return s.get(ctx, call.Name, call.ID, call.OperationID), nil
 }
 
 func (s *Storage) get(ctx context.Context, name string, id string, req string) jetflow.Handler {
 	// Get last committed value. Create a new value if not found.
 	operatorKey := name + "." + id
 	requestOperatorKey := operatorKey + "." + req
-	log.Println(req, "Storage.Get", requestOperatorKey)
 
 	// Load the operator version for the current request.
 	operator, ok := s.versionOperatorMapping.Load(requestOperatorKey)
 	if !ok {
-		log.Println(req, "Storage.Get clone", requestOperatorKey)
+		log.Println("Storage.Get clone", requestOperatorKey)
 		// Clone the committed version if there was no previous version for this request.
 		committedVersion := s.loadOrCreateVersion(operatorKey)
 		operator, ok = s.versionOperatorMapping.Load(committedVersion.key)
 		if !ok {
-			log.Println(req, "Storage.Get create", requestOperatorKey)
+			log.Println("Storage.Get create", requestOperatorKey)
 			// Create an initial instance of the operator if it did not yet exist.
 			operator, _ = s.versionOperatorMapping.LoadOrStore(
 				committedVersion.key,
@@ -65,8 +66,12 @@ func (s *Storage) get(ctx context.Context, name string, id string, req string) j
 	return operator.(jetflow.Handler)
 }
 
-func (s *Storage) Prepare(ctx context.Context, call jetflow.Request) (ok bool) {
-	return s.prepare(ctx, call.Name, call.ID, call.OperationID)
+func (s *Storage) Prepare(ctx context.Context, call jetflow.Request) error {
+	prepared := s.prepare(ctx, call.Name, call.ID, call.OperationID)
+	if !prepared {
+		return errors.New("failed to prepare")
+	}
+	return nil
 }
 
 func (s *Storage) prepare(ctx context.Context, name string, id string, req string) (ok bool) {
@@ -100,8 +105,9 @@ func (s *Storage) prepare(ctx context.Context, name string, id string, req strin
 	return updated
 }
 
-func (s *Storage) Commit(ctx context.Context, call jetflow.Request) {
+func (s *Storage) Commit(ctx context.Context, call jetflow.Request) error {
 	s.commit(ctx, call.Name, call.ID, call.OperationID)
+	return nil
 }
 
 func (s *Storage) commit(ctx context.Context, name string, id string, req string) {
@@ -129,8 +135,9 @@ func (s *Storage) commit(ctx context.Context, name string, id string, req string
 	s.versionOperatorMapping.Delete(oldVersion.key)
 }
 
-func (s *Storage) Rollback(ctx context.Context, call jetflow.Request) {
+func (s *Storage) Rollback(ctx context.Context, call jetflow.Request) error {
 	s.rollback(ctx, call.Name, call.ID, call.OperationID)
+	return nil
 }
 
 func (s *Storage) rollback(ctx context.Context, name string, id string, req string) {

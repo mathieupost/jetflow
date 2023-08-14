@@ -2,7 +2,6 @@ package jetflow
 
 import (
 	"context"
-	"log"
 )
 
 type ctxKey string
@@ -46,6 +45,5 @@ func ContextAddInvolvedOperator(ctx context.Context, name, id string) context.Co
 		operators[name] = instances
 	}
 	instances[id] = true
-	log.Println(operators)
 	return ContextWithInvolvedOperators(ctx, operators)
 }
