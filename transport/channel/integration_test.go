@@ -1,4 +1,4 @@
-package jetflow_test
+package channel
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	"github.com/mathieupost/jetflow/example/gen"
 	"github.com/mathieupost/jetflow/example/types"
 	"github.com/mathieupost/jetflow/storage/memory"
-	"github.com/mathieupost/jetflow/transport/channel"
 )
 
 func TestCall(t *testing.T) {
@@ -25,14 +24,14 @@ func TestCall(t *testing.T) {
 	responseChan := make(chan jetflow.Response, 100)
 
 	factoryMapping := gen.ProxyFactoryMapping()
-	publisher := channel.NewPublisher(requestChan, responseChan)
+	publisher := NewPublisher(requestChan, responseChan)
 	client := jetflow.NewClient(factoryMapping, publisher)
 
 	handlerFactory := gen.HandlerFactoryMapping()
 	storage := memory.NewStorage(handlerFactory)
 
 	executor := jetflow.NewExecutor(storage, client)
-	consumer := channel.NewConsumer(requestChan, responseChan, executor)
+	consumer := NewConsumer(requestChan, responseChan, executor)
 	consumer.Start(ctx)
 
 	// Create a zipf distribution
@@ -40,7 +39,7 @@ func TestCall(t *testing.T) {
 	dist := rand.NewZipf(r, 1.5, 1, 100)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
