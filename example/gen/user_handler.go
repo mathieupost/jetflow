@@ -3,12 +3,12 @@ package gen
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"github.com/pkg/errors"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/example/types"
+	"github.com/mathieupost/jetflow/log"
 )
 
 var _ jetflow.OperatorHandler = (*UserHandler)(nil)

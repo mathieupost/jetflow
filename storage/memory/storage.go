@@ -3,12 +3,12 @@ package memory
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 
 	"github.com/huandu/go-clone"
 
 	"github.com/mathieupost/jetflow"
+	"github.com/mathieupost/jetflow/log"
 )
 
 type Storage struct {

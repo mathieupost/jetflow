@@ -2,9 +2,9 @@ package channel
 
 import (
 	"context"
-	"log"
 
 	"github.com/mathieupost/jetflow"
+	"github.com/mathieupost/jetflow/log"
 )
 
 type Consumer struct {

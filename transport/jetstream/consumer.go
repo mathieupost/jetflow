@@ -3,7 +3,6 @@ package jetstream
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
@@ -11,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mathieupost/jetflow"
+	"github.com/mathieupost/jetflow/log"
 )
 
 type Consumer struct {

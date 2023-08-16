@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/google/uuid"
@@ -13,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mathieupost/jetflow"
+	"github.com/mathieupost/jetflow/log"
 )
 
 var _ jetflow.Publisher = (*Publisher)(nil)

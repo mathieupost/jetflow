@@ -2,11 +2,12 @@ package jetflow
 
 import (
 	"context"
-	"log"
 	"reflect"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	"github.com/mathieupost/jetflow/log"
 )
 
 var _ OperatorClient = (*Client)(nil)

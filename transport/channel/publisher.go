@@ -2,10 +2,10 @@ package channel
 
 import (
 	"context"
-	"log"
 	"sync"
 
 	"github.com/mathieupost/jetflow"
+	"github.com/mathieupost/jetflow/log"
 )
 
 var _ jetflow.Publisher = (*Publisher)(nil)

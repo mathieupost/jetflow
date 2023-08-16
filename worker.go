@@ -2,12 +2,13 @@ package jetflow
 
 import (
 	"context"
-	"log"
 	"sync"
 	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	"github.com/mathieupost/jetflow/log"
 )
 
 type Executor struct {
