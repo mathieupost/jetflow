@@ -2,7 +2,7 @@ package gen
 
 import "github.com/mathieupost/jetflow"
 
-func FactoryMapping() jetflow.ProxyFactoryMapping {
+func ProxyFactoryMapping() jetflow.ProxyFactoryMapping {
 	return map[string]jetflow.ProxyFactory{
 		"User": NewUserProxy,
 	}

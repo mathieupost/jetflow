@@ -10,6 +10,7 @@ import (
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/mocks"
+	"github.com/mathieupost/jetflow/transport/channel"
 )
 
 func TestProcessRequest(t *testing.T) {
@@ -32,8 +33,9 @@ func TestProcessRequest(t *testing.T) {
 		handler := mocks.NewHandler(t)
 		client := mocks.NewOperatorClient(t)
 
-		worker := jetflow.NewWorker(storage, client, inbox, outbox)
-		worker.Start(ctx)
+		worker := jetflow.NewExecutor(storage, client)
+		subscriber := channel.NewConsumer(inbox, outbox, worker)
+		subscriber.Start(ctx)
 
 		return test{inbox, outbox, storage, handler, client}
 	}

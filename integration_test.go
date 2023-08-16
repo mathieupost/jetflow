@@ -13,6 +13,7 @@ import (
 	"github.com/mathieupost/jetflow/example/gen"
 	"github.com/mathieupost/jetflow/example/types"
 	"github.com/mathieupost/jetflow/storage/memory"
+	"github.com/mathieupost/jetflow/transport/channel"
 )
 
 func TestCall(t *testing.T) {
@@ -23,15 +24,16 @@ func TestCall(t *testing.T) {
 	requestChan := make(chan jetflow.Request, 100)
 	responseChan := make(chan jetflow.Response, 100)
 
-	dispatcher := memory.NewDispatcher(requestChan, responseChan)
-
-	factoryMapping := gen.FactoryMapping()
-	client := jetflow.NewClient(factoryMapping, dispatcher)
+	factoryMapping := gen.ProxyFactoryMapping()
+	publisher := channel.NewPublisher(requestChan, responseChan)
+	client := jetflow.NewClient(factoryMapping, publisher)
 
 	handlerFactory := gen.HandlerFactoryMapping()
 	storage := memory.NewStorage(handlerFactory)
-	worker1 := jetflow.NewWorker(storage, client, requestChan, responseChan)
-	worker1.Start(ctx)
+
+	executor := jetflow.NewExecutor(storage, client)
+	consumer := channel.NewConsumer(requestChan, responseChan, executor)
+	consumer.Start(ctx)
 
 	// Create a zipf distribution
 	r := rand.New(rand.NewSource(87945723908))

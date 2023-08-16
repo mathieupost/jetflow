@@ -13,10 +13,10 @@ var _ OperatorClient = (*Client)(nil)
 
 type Client struct {
 	mapping    ProxyFactoryMapping
-	dispatcher Dispatcher
+	dispatcher Publisher
 }
 
-func NewClient(mapping ProxyFactoryMapping, dispatcher Dispatcher) *Client {
+func NewClient(mapping ProxyFactoryMapping, dispatcher Publisher) *Client {
 	return &Client{
 		mapping:    mapping,
 		dispatcher: dispatcher,
@@ -31,7 +31,7 @@ func (c *Client) Call(ctx context.Context, call Request) (res []byte, err error)
 
 	log.Println("Client.Call:\n", call)
 
-	replyChan, err := c.dispatcher.Dispatch(ctx, call)
+	replyChan, err := c.dispatcher.Publish(ctx, call)
 	if err != nil {
 		return nil, errors.Wrap(err, "dispatching request")
 	}

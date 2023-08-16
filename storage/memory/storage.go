@@ -29,12 +29,12 @@ func NewStorage(mapping jetflow.HandlerFactoryMapping) *Storage {
 	}
 }
 
-func (s *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.Handler, error) {
+func (s *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.OperatorHandler, error) {
 	log.Println("Storage.Get\n", call)
 	return s.get(ctx, call.Name, call.ID, call.OperationID), nil
 }
 
-func (s *Storage) get(ctx context.Context, name string, id string, req string) jetflow.Handler {
+func (s *Storage) get(ctx context.Context, name string, id string, req string) jetflow.OperatorHandler {
 	// Get last committed value. Create a new value if not found.
 	operatorKey := name + "." + id
 	requestOperatorKey := operatorKey + "." + req
@@ -63,7 +63,7 @@ func (s *Storage) get(ctx context.Context, name string, id string, req string) j
 		})
 	}
 
-	return operator.(jetflow.Handler)
+	return operator.(jetflow.OperatorHandler)
 }
 
 func (s *Storage) Prepare(ctx context.Context, call jetflow.Request) error {

@@ -9,11 +9,11 @@ type Operator interface {
 	ID() string
 }
 
-// Handler handles calls to the methods of an operator.
+// OperatorHandler handles calls to the methods of an operator.
 //
 // It will convert an OperatorCall to a method call and convert the result to
 // a Result struct.
-type Handler interface {
+type OperatorHandler interface {
 	Handle(ctx context.Context, client OperatorClient, call Request) ([]byte, error)
 }
 
@@ -29,21 +29,25 @@ type (
 	HandlerFactoryMapping map[string]HandlerFactory
 )
 
-// ProxyFactory instantiates a OperatorProxy value.
-//
-// Used by the OperatorClient to instantiate an operator to an OperatorProxy, so method
-// calls can be proxied to the actual implementation.
 type (
+	// ProxyFactory instantiates a OperatorProxy value.
+	//
+	// Used by the OperatorClient to instantiate an operator to an OperatorProxy, so method
+	// calls can be proxied to the actual implementation.
 	ProxyFactory   func(id string, client OperatorClient) Operator
-	HandlerFactory func(id string) Handler
+	HandlerFactory func(id string) OperatorHandler
 )
 
-type Dispatcher interface {
-	Dispatch(context.Context, Request) (chan Response, error)
+type Publisher interface {
+	Publish(context.Context, Request) (chan Response, error)
+}
+
+type RequestHandler interface {
+	Handle(ctx context.Context, req Request) Response
 }
 
 type Storage interface {
-	Get(ctx context.Context, call Request) (Handler, error)
+	Get(ctx context.Context, call Request) (OperatorHandler, error)
 	Prepare(ctx context.Context, call Request) error
 	Commit(ctx context.Context, call Request) error
 	Rollback(ctx context.Context, call Request) error

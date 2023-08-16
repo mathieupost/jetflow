@@ -16,7 +16,7 @@ func TestClientFind(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	mapping := gen.FactoryMapping()
+	mapping := gen.ProxyFactoryMapping()
 	var client jetflow.OperatorClient = jetflow.NewClient(mapping, nil)
 	var testUser types.User
 	err := client.Find(ctx, "test_user", &testUser)

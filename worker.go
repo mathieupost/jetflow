@@ -10,17 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Worker struct {
-	inbox   chan Request
-	outbox  chan Response
+type Executor struct {
 	client  OperatorClient
 	storage Storage
 }
 
-func NewWorker(storage Storage, client OperatorClient, inbox chan Request, outbox chan Response) *Worker {
-	w := &Worker{
-		inbox:   inbox,
-		outbox:  outbox,
+func NewExecutor(storage Storage, client OperatorClient) *Executor {
+	w := &Executor{
 		client:  client,
 		storage: storage,
 	}
@@ -28,50 +24,32 @@ func NewWorker(storage Storage, client OperatorClient, inbox chan Request, outbo
 	return w
 }
 
-func (w *Worker) Start(ctx context.Context) {
-	go w.processInbox(ctx)
-}
-
-func (w *Worker) processInbox(ctx context.Context) {
-	loop := true
-	for loop {
-		select {
-		case req := <-w.inbox:
-			go func() {
-				switch req.Method {
-				case string(MethodPrepare):
-					err := w.storage.Prepare(ctx, req)
-					w.outbox <- req.Response(ctx, nil, err)
-				case string(MethodCommit):
-					err := w.storage.Commit(ctx, req)
-					w.outbox <- req.Response(ctx, nil, err)
-				case string(MethodRollback):
-					err := w.storage.Rollback(ctx, req)
-					w.outbox <- req.Response(ctx, nil, err)
-				default:
-					w.processRequest(ctx, req)
-				}
-			}()
-		case <-ctx.Done():
-			loop = false
-		}
+func (w *Executor) Handle(ctx context.Context, req Request) Response {
+	switch req.Method {
+	case string(MethodPrepare):
+		err := w.storage.Prepare(ctx, req)
+		return req.Response(ctx, nil, err)
+	case string(MethodCommit):
+		err := w.storage.Commit(ctx, req)
+		return req.Response(ctx, nil, err)
+	case string(MethodRollback):
+		err := w.storage.Rollback(ctx, req)
+		return req.Response(ctx, nil, err)
+	default:
+		return w.handleCall(ctx, req)
 	}
-	log.Println("Worker stopped")
 }
 
-func (w *Worker) processRequest(ctx context.Context, call Request) {
+func (w *Executor) handleCall(ctx context.Context, call Request) Response {
 	originalRequestID := call.RequestID
 
-	retry := true
-	for retry {
-		log.Println("Worker.processRequest\n", call)
+	for {
+		log.Println("Executor.processRequest\n", call)
 
 		ctx := ContextWithOperationID(ctx, call.OperationID)
 
-		retry = false
-
 		response := w.handle(ctx, call)
-		log.Println("Worker.processRequest response:", response, "\n", call)
+		log.Println("Executor.processRequest response:", response, "\n", call)
 
 		// The initial request has the same id as the operation.
 		isInitialRequest := call.OperationID == call.RequestID
@@ -88,7 +66,6 @@ func (w *Worker) processRequest(ctx context.Context, call Request) {
 			// Rollback and retry if we either got an error or if we could not
 			// prepare all involved operators.
 			if !success {
-				retry = true
 				w.broadcast(ctx, MethodRollback, operators)
 
 				// Create a new transaction id for the retry. Otherwise, the retry
@@ -99,18 +76,19 @@ func (w *Worker) processRequest(ctx context.Context, call Request) {
 					"original:", originalRequestID)
 				call.OperationID = transactionID
 				call.RequestID = transactionID
-				continue
+
+				continue // Retry
 			} else {
 				w.broadcast(ctx, MethodCommit, operators)
 			}
 		}
 
 		response.RequestID = originalRequestID
-		w.outbox <- response
+		return response
 	}
 }
 
-func (w *Worker) broadcast(ctx context.Context, method Method, operators map[string]map[string]bool) bool {
+func (w *Executor) broadcast(ctx context.Context, method Method, operators map[string]map[string]bool) bool {
 	var success atomic.Bool
 	success.Store(true)
 	var wg sync.WaitGroup
@@ -125,7 +103,7 @@ func (w *Worker) broadcast(ctx context.Context, method Method, operators map[str
 			go func() {
 				_, err := w.client.Call(ctx, request)
 				if err != nil {
-					log.Println("Worker.broadcast error:", err)
+					log.Println("Executor.broadcast error:", err)
 					success.Store(false)
 				}
 				wg.Done()
@@ -136,7 +114,7 @@ func (w *Worker) broadcast(ctx context.Context, method Method, operators map[str
 	return success.Load()
 }
 
-func (w *Worker) handle(ctx context.Context, call Request) Response {
+func (w *Executor) handle(ctx context.Context, call Request) Response {
 	// (mis)use the context to keep track of the involved operators.
 	involvedOperators := map[string]map[string]bool{}
 	ctx = ContextWithInvolvedOperators(ctx, involvedOperators)
@@ -150,7 +128,7 @@ func (w *Worker) handle(ctx context.Context, call Request) Response {
 
 	res, err := operator.Handle(ctx, w.client, call)
 	if err != nil {
-		log.Println("Worker handle call error:", err)
+		log.Println("Executor handle call error:", err)
 		err = errors.Wrap(err, "handle operator call")
 		return call.Response(ctx, nil, err)
 	}

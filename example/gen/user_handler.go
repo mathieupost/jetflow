@@ -11,13 +11,13 @@ import (
 	"github.com/mathieupost/jetflow/example/types"
 )
 
-var _ jetflow.Handler = (*UserHandler)(nil)
+var _ jetflow.OperatorHandler = (*UserHandler)(nil)
 
 type UserHandler struct {
 	user types.User
 }
 
-func NewUserHandler(id string) jetflow.Handler {
+func NewUserHandler(id string) jetflow.OperatorHandler {
 	user := types.NewUser(id)
 	return &UserHandler{user}
 }

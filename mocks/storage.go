@@ -66,19 +66,19 @@ func (_c *Storage_Commit_Call) RunAndReturn(run func(context.Context, jetflow.Re
 }
 
 // Get provides a mock function with given fields: ctx, call
-func (_m *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.Handler, error) {
+func (_m *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.OperatorHandler, error) {
 	ret := _m.Called(ctx, call)
 
-	var r0 jetflow.Handler
+	var r0 jetflow.OperatorHandler
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) (jetflow.Handler, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) (jetflow.OperatorHandler, error)); ok {
 		return rf(ctx, call)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) jetflow.Handler); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) jetflow.OperatorHandler); ok {
 		r0 = rf(ctx, call)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(jetflow.Handler)
+			r0 = ret.Get(0).(jetflow.OperatorHandler)
 		}
 	}
 
@@ -110,12 +110,12 @@ func (_c *Storage_Get_Call) Run(run func(ctx context.Context, call jetflow.Reque
 	return _c
 }
 
-func (_c *Storage_Get_Call) Return(_a0 jetflow.Handler, _a1 error) *Storage_Get_Call {
+func (_c *Storage_Get_Call) Return(_a0 jetflow.OperatorHandler, _a1 error) *Storage_Get_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *Storage_Get_Call) RunAndReturn(run func(context.Context, jetflow.Request) (jetflow.Handler, error)) *Storage_Get_Call {
+func (_c *Storage_Get_Call) RunAndReturn(run func(context.Context, jetflow.Request) (jetflow.OperatorHandler, error)) *Storage_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -211,7 +211,8 @@ func (_c *Storage_Rollback_Call) RunAndReturn(run func(context.Context, jetflow.
 func NewStorage(t interface {
 	mock.TestingT
 	Cleanup(func())
-}) *Storage {
+},
+) *Storage {
 	mock := &Storage{}
 	mock.Mock.Test(t)
 
