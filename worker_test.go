@@ -10,7 +10,6 @@ import (
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/mocks"
-	"github.com/mathieupost/jetflow/transport/channel"
 )
 
 func TestProcessRequest(t *testing.T) {
@@ -19,25 +18,20 @@ func TestProcessRequest(t *testing.T) {
 	t.Cleanup(cancel)
 
 	type test struct {
-		inbox   chan jetflow.Request
-		outbox  chan jetflow.Response
+		worker  jetflow.RequestHandler
 		storage *mocks.Storage
 		handler *mocks.Handler
 		client  *mocks.OperatorClient
 	}
 
 	setup := func(t *testing.T) test {
-		inbox := make(chan jetflow.Request, 1)
-		outbox := make(chan jetflow.Response, 1)
 		storage := mocks.NewStorage(t)
 		handler := mocks.NewHandler(t)
 		client := mocks.NewOperatorClient(t)
 
 		worker := jetflow.NewExecutor(storage, client)
-		subscriber := channel.NewConsumer(inbox, outbox, worker)
-		subscriber.Start(ctx)
 
-		return test{inbox, outbox, storage, handler, client}
+		return test{worker, storage, handler, client}
 	}
 
 	ANY := mock.Anything
@@ -55,11 +49,11 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
 
-		tt.inbox <- jetflow.Request{
+		request := jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   t.Name(),
 		}
-		response := <-tt.outbox
+		response := tt.worker.Handle(ctx, request)
 
 		require.Equal(t, t.Name(), response.RequestID)
 		require.ErrorIs(t, response.Error, nil)
@@ -71,11 +65,11 @@ func TestProcessRequest(t *testing.T) {
 		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
 		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
 
-		tt.inbox <- jetflow.Request{
+		request := jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   "child",
 		}
-		response := <-tt.outbox
+		response := tt.worker.Handle(ctx, request)
 
 		require.Equal(t, "child", response.RequestID)
 		require.ErrorIs(t, response.Error, nil)
@@ -93,11 +87,11 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
 
-		tt.inbox <- jetflow.Request{
+		request := jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   t.Name(),
 		}
-		response := <-tt.outbox
+		response := tt.worker.Handle(ctx, request)
 
 		require.Equal(t, t.Name(), response.RequestID)
 		require.ErrorIs(t, response.Error, nil)
@@ -110,11 +104,11 @@ func TestProcessRequest(t *testing.T) {
 		err := errors.New("handle error")
 		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, err).Once()
 
-		tt.inbox <- jetflow.Request{
+		request := jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   "child",
 		}
-		response := <-tt.outbox
+		response := tt.worker.Handle(ctx, request)
 
 		require.Equal(t, "child", response.RequestID)
 		require.ErrorIs(t, response.Error, err)
@@ -133,11 +127,11 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
 
-		tt.inbox <- jetflow.Request{
+		request := jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   t.Name(),
 		}
-		response := <-tt.outbox
+		response := tt.worker.Handle(ctx, request)
 
 		require.Equal(t, t.Name(), response.RequestID)
 		require.ErrorIs(t, response.Error, nil)
