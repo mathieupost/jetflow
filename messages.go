@@ -51,23 +51,50 @@ type Response struct {
 	Error  error
 }
 
+type jsonResponse struct {
+	RequestID         string
+	InvolvedOperators map[string]map[string]bool
+
+	Values []byte
+	Error  string
+}
+
+func (r Response) MarshalJSON() ([]byte, error) {
+	var rerr string
+	if r.Error != nil {
+		rerr = r.Error.Error()
+	}
+
+	res := jsonResponse{
+		r.RequestID,
+		r.InvolvedOperators,
+		r.Values,
+		rerr,
+	}
+
+	data, err := json.Marshal(res)
+	return data, errors.Wrap(err, "marshal Result")
+}
+
 // UnmarshalJSON implements json.Unmarshaler
 func (r *Response) UnmarshalJSON(data []byte) error {
-	var res struct {
-		RequestID string
-
-		Values []byte
-		Error  string
-	}
+	var res jsonResponse
 
 	err := json.Unmarshal(data, &res)
 	if err != nil {
 		return errors.Wrap(err, "unmarshalling Reply")
 	}
 
-	r.Values = res.Values
+	var rerr error
 	if res.Error != "" {
-		r.Error = errors.New(res.Error)
+		rerr = errors.New(res.Error)
+	}
+
+	*r = Response{
+		res.RequestID,
+		res.InvolvedOperators,
+		res.Values,
+		rerr,
 	}
 	return nil
 }
