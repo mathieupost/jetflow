@@ -17,7 +17,7 @@ type Worker struct {
 	storage Storage
 }
 
-func NewWorker(client OperatorClient, storage Storage, inbox chan Request, outbox chan Response) *Worker {
+func NewWorker(storage Storage, client OperatorClient, inbox chan Request, outbox chan Response) *Worker {
 	w := &Worker{
 		inbox:   inbox,
 		outbox:  outbox,

@@ -17,77 +17,127 @@ func TestProcessRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 
-	handleErr := errors.New("error")
-	table := []struct {
-		name        string
-		operationID string
-		requestID   string
-		handleErr   error
-		setup       func(storage *mocks.Storage)
-	}{
-		{
-			name:        "MainRequest",
-			operationID: "operation1",
-			requestID:   "operation1",
-			handleErr:   nil,
-			setup: func(storage *mocks.Storage) {
-				storage.EXPECT().Prepare(mock.Anything, mock.Anything).Return(true)
-				storage.EXPECT().Commit(mock.Anything, mock.Anything).Return()
-			},
-		},
-		{
-			name:        "MainRequestFailed",
-			operationID: "operation1",
-			requestID:   "operation1",
-			handleErr:   handleErr,
-			setup: func(storage *mocks.Storage) {
-				storage.EXPECT().Rollback(mock.Anything, mock.Anything).Return()
-			},
-		},
-		{
-			name:        "SubRequest",
-			operationID: "operation1",
-			requestID:   "request2",
-			handleErr:   nil,
-			setup: func(storage *mocks.Storage) {
-				storage.EXPECT().Prepare(mock.Anything, mock.Anything).Return(true)
-				storage.EXPECT().Commit(mock.Anything, mock.Anything).Return()
-			},
-		},
-		{
-			name:        "SubRequest",
-			operationID: "operation1",
-			requestID:   "request2",
-			handleErr:   handleErr,
-			setup: func(storage *mocks.Storage) {
-				storage.EXPECT().Rollback(mock.Anything, mock.Anything).Return()
-			},
-		},
+	type test struct {
+		inbox   chan jetflow.Request
+		outbox  chan jetflow.Response
+		storage *mocks.Storage
+		handler *mocks.Handler
+		client  *mocks.OperatorClient
 	}
 
-	for _, tt := range table {
-		t.Run(tt.name, func(t *testing.T) {
-			inbox := make(chan jetflow.Request, 1)
-			outbox := make(chan jetflow.Response, 1)
-			client := mocks.NewOperatorClient(t)
-			storage := mocks.NewStorage(t)
-			handler := mocks.NewHandler(t)
+	setup := func(t *testing.T) test {
+		inbox := make(chan jetflow.Request, 1)
+		outbox := make(chan jetflow.Response, 1)
+		storage := mocks.NewStorage(t)
+		handler := mocks.NewHandler(t)
+		client := mocks.NewOperatorClient(t)
 
-			worker := jetflow.NewWorker(client, storage, inbox, outbox)
-			worker.Start(ctx)
+		worker := jetflow.NewWorker(storage, client, inbox, outbox)
+		worker.Start(ctx)
 
-			storage.EXPECT().Get(mock.Anything, mock.Anything).Return(handler)
-			handler.EXPECT().Handle(mock.Anything, mock.Anything, mock.Anything).Return(nil, tt.handleErr)
-			tt.setup(storage)
+		return test{inbox, outbox, storage, handler, client}
+	}
 
-			inbox <- jetflow.Request{
-				OperationID: tt.operationID,
-				RequestID:   tt.requestID,
-			}
-
-			response := <-outbox
-			require.Equal(t, tt.requestID, response.RequestID)
-			require.ErrorIs(t, response.Error, tt.handleErr)
+	ANY := mock.Anything
+	match := func(method jetflow.Method) interface{} {
+		return mock.MatchedBy(func(m jetflow.Request) bool {
+			return m.Method == string(method)
 		})
 	}
+
+	t.Run("Parent", func(t *testing.T) {
+		tt := setup(t)
+
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
+
+		tt.inbox <- jetflow.Request{
+			OperationID: t.Name(),
+			RequestID:   t.Name(),
+		}
+		response := <-tt.outbox
+
+		require.Equal(t, t.Name(), response.RequestID)
+		require.ErrorIs(t, response.Error, nil)
+	})
+
+	t.Run("Child", func(t *testing.T) {
+		tt := setup(t)
+
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
+
+		tt.inbox <- jetflow.Request{
+			OperationID: t.Name(),
+			RequestID:   "child",
+		}
+		response := <-tt.outbox
+
+		require.Equal(t, "child", response.RequestID)
+		require.ErrorIs(t, response.Error, nil)
+	})
+
+	t.Run("ParentHandleError", func(t *testing.T) {
+		tt := setup(t)
+
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		err := errors.New("handle error")
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, err).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodRollback)).Return(nil, nil).Once() // ROLLBACK
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
+
+		tt.inbox <- jetflow.Request{
+			OperationID: t.Name(),
+			RequestID:   t.Name(),
+		}
+		response := <-tt.outbox
+
+		require.Equal(t, t.Name(), response.RequestID)
+		require.ErrorIs(t, response.Error, nil)
+	})
+
+	t.Run("ChildHandleError", func(t *testing.T) {
+		tt := setup(t)
+
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		err := errors.New("handle error")
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, err).Once()
+
+		tt.inbox <- jetflow.Request{
+			OperationID: t.Name(),
+			RequestID:   "child",
+		}
+		response := <-tt.outbox
+
+		require.Equal(t, "child", response.RequestID)
+		require.ErrorIs(t, response.Error, err)
+	})
+
+	t.Run("ParentPrepareError", func(t *testing.T) {
+		tt := setup(t)
+
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
+		err := errors.New("handle error")
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, err).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodRollback)).Return(nil, nil).Once() // ROLLBACK
+		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
+		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
+		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
+
+		tt.inbox <- jetflow.Request{
+			OperationID: t.Name(),
+			RequestID:   t.Name(),
+		}
+		response := <-tt.outbox
+
+		require.Equal(t, t.Name(), response.RequestID)
+		require.ErrorIs(t, response.Error, nil)
+	})
 }

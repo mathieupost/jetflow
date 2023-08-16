@@ -30,7 +30,7 @@ func TestCall(t *testing.T) {
 
 	handlerFactory := gen.HandlerFactoryMapping()
 	storage := memory.NewStorage(handlerFactory)
-	worker1 := jetflow.NewWorker(client, storage, requestChan, responseChan)
+	worker1 := jetflow.NewWorker(storage, client, requestChan, responseChan)
 	worker1.Start(ctx)
 
 	// Create a zipf distribution
