@@ -2,9 +2,11 @@ package jetflow
 
 import (
 	"context"
+	"math"
+	"math/rand"
 	"reflect"
+	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/mathieupost/jetflow/log"
@@ -25,8 +27,7 @@ func NewClient(mapping ProxyFactoryMapping, dispatcher Publisher) *Client {
 }
 
 func (c *Client) Call(ctx context.Context, call Request) (res []byte, err error) {
-	requestID := uuid.NewString()
-	requestID = requestID[len(requestID)-12:]
+	requestID := strconv.Itoa(rand.Intn(math.MaxInt))
 	call.OperationID = OperationIDFromContext(ctx, requestID)
 	call.RequestID = requestID
 

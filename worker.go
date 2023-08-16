@@ -2,10 +2,10 @@ package jetflow
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/mathieupost/jetflow/log"
@@ -44,6 +44,7 @@ func (w *Executor) Handle(ctx context.Context, req Request) Response {
 func (w *Executor) handleCall(ctx context.Context, call Request) Response {
 	originalRequestID := call.RequestID
 
+	retryCount := 0
 	for {
 		log.Println("Executor.processRequest\n", call)
 
@@ -71,13 +72,14 @@ func (w *Executor) handleCall(ctx context.Context, call Request) Response {
 
 				// Create a new transaction id for the retry. Otherwise, the retry
 				// may use the old state of the involved operators.
-				transactionID := uuid.NewString()
+				transactionID := fmt.Sprintf("%s-%d", originalRequestID, retryCount)
 				transactionID = transactionID[len(transactionID)-12:]
 				log.Println(call.OperationID, "->", transactionID,
 					"original:", originalRequestID)
 				call.OperationID = transactionID
 				call.RequestID = transactionID
 
+				retryCount++
 				continue // Retry
 			} else {
 				w.broadcast(ctx, MethodCommit, operators)
