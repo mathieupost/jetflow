@@ -22,7 +22,7 @@ func NewUserHandler(id string) jetflow.OperatorHandler {
 	return &UserHandler{user}
 }
 
-func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient, call jetflow.Request) (res []byte, err error) {
+func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient, call *jetflow.Request) (res []byte, err error) {
 	log.Println("UserHandler.Handle\n", call)
 	switch call.Method {
 

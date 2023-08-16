@@ -14,13 +14,13 @@ type Operator interface {
 // It will convert an OperatorCall to a method call and convert the result to
 // a Result struct.
 type OperatorHandler interface {
-	Handle(ctx context.Context, client OperatorClient, call Request) ([]byte, error)
+	Handle(context.Context, OperatorClient, *Request) ([]byte, error)
 }
 
 //go:generate go run github.com/vektra/mockery/v2 --name OperatorClient --case underscore --with-expecter
 type OperatorClient interface {
 	Find(ctx context.Context, id string, operator interface{}) error
-	Call(ctx context.Context, call Request) (res []byte, err error)
+	Call(context.Context, *Request) (res []byte, err error)
 }
 
 // ProxyFactoryMapping maps type names to OperatorFactories.
@@ -39,16 +39,16 @@ type (
 )
 
 type Publisher interface {
-	Publish(context.Context, Request) (chan Response, error)
+	Publish(context.Context, *Request) (chan *Response, error)
 }
 
 type RequestHandler interface {
-	Handle(ctx context.Context, req Request) Response
+	Handle(context.Context, *Request) *Response
 }
 
 type Storage interface {
-	Get(ctx context.Context, call Request) (OperatorHandler, error)
-	Prepare(ctx context.Context, call Request) error
-	Commit(ctx context.Context, call Request) error
-	Rollback(ctx context.Context, call Request) error
+	Get(context.Context, *Request) (OperatorHandler, error)
+	Prepare(context.Context, *Request) error
+	Commit(context.Context, *Request) error
+	Rollback(context.Context, *Request) error
 }

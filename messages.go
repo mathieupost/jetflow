@@ -27,15 +27,15 @@ type Request struct {
 }
 
 // String returns a string representation of the request.
-func (r Request) String() string {
+func (r *Request) String() string {
 	return fmt.Sprintf("%s %s %s(%s).%s(%s)",
 		r.OperationID, r.RequestID,
 		r.Name, r.ID, r.Method, string(r.Args),
 	)
 }
 
-func (r Request) Response(ctx context.Context, values []byte, err error) Response {
-	return Response{
+func (r *Request) Response(ctx context.Context, values []byte, err error) *Response {
+	return &Response{
 		RequestID:         r.RequestID,
 		InvolvedOperators: InvolvedOperatorsFromContext(ctx),
 		Values:            values,

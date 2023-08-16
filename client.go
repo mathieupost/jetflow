@@ -26,7 +26,7 @@ func NewClient(mapping ProxyFactoryMapping, dispatcher Publisher) *Client {
 	}
 }
 
-func (c *Client) Call(ctx context.Context, call Request) (res []byte, err error) {
+func (c *Client) Call(ctx context.Context, call *Request) (res []byte, err error) {
 	requestID := strconv.Itoa(rand.Intn(math.MaxInt))
 	call.OperationID = OperationIDFromContext(ctx, requestID)
 	call.RequestID = requestID

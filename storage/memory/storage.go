@@ -11,6 +11,8 @@ import (
 	"github.com/mathieupost/jetflow/log"
 )
 
+var _ jetflow.Storage = (*Storage)(nil)
+
 type Storage struct {
 	typeHandlerMapping     jetflow.HandlerFactoryMapping
 	keyVersionMapping      sync.Map
@@ -29,7 +31,7 @@ func NewStorage(mapping jetflow.HandlerFactoryMapping) *Storage {
 	}
 }
 
-func (s *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.OperatorHandler, error) {
+func (s *Storage) Get(ctx context.Context, call *jetflow.Request) (jetflow.OperatorHandler, error) {
 	log.Println("Storage.Get\n", call)
 	return s.get(ctx, call.Name, call.ID, call.OperationID), nil
 }
@@ -66,7 +68,7 @@ func (s *Storage) get(ctx context.Context, name string, id string, req string) j
 	return operator.(jetflow.OperatorHandler)
 }
 
-func (s *Storage) Prepare(ctx context.Context, call jetflow.Request) error {
+func (s *Storage) Prepare(ctx context.Context, call *jetflow.Request) error {
 	prepared := s.prepare(ctx, call.Name, call.ID, call.OperationID)
 	if !prepared {
 		return errors.New("failed to prepare")
@@ -78,7 +80,6 @@ func (s *Storage) prepare(ctx context.Context, name string, id string, req strin
 	log.Println(req, "Storage.Prepare", name, id, req)
 
 	operatorKey := name + "." + id
-	requestOperatorKey := operatorKey + "." + req
 	committedVersion := s.loadVersion(operatorKey)
 
 	if committedVersion.prepared != "" {
@@ -87,6 +88,7 @@ func (s *Storage) prepare(ctx context.Context, name string, id string, req strin
 		return false
 	}
 
+	requestOperatorKey := operatorKey + "." + req
 	requestVersion := s.loadVersion(requestOperatorKey)
 
 	// Check if the version for the given request is created
@@ -105,7 +107,7 @@ func (s *Storage) prepare(ctx context.Context, name string, id string, req strin
 	return updated
 }
 
-func (s *Storage) Commit(ctx context.Context, call jetflow.Request) error {
+func (s *Storage) Commit(ctx context.Context, call *jetflow.Request) error {
 	s.commit(ctx, call.Name, call.ID, call.OperationID)
 	return nil
 }
@@ -135,7 +137,7 @@ func (s *Storage) commit(ctx context.Context, name string, id string, req string
 	s.versionOperatorMapping.Delete(oldVersion.key)
 }
 
-func (s *Storage) Rollback(ctx context.Context, call jetflow.Request) error {
+func (s *Storage) Rollback(ctx context.Context, call *jetflow.Request) error {
 	s.rollback(ctx, call.Name, call.ID, call.OperationID)
 	return nil
 }

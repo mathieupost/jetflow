@@ -31,8 +31,7 @@ func TestCall(t *testing.T) {
 	storage := memory.NewStorage(handlerFactory)
 
 	executor := jetflow.NewExecutor(storage, client)
-	consumer := NewConsumer(ctx, js, executor)
-	println(consumer)
+	_ = NewConsumer(ctx, js, executor)
 
 	transport.IntegrationTest(t, ctx, client)
 }

@@ -22,13 +22,13 @@ func (_m *Storage) EXPECT() *Storage_Expecter {
 	return &Storage_Expecter{mock: &_m.Mock}
 }
 
-// Commit provides a mock function with given fields: ctx, call
-func (_m *Storage) Commit(ctx context.Context, call jetflow.Request) error {
-	ret := _m.Called(ctx, call)
+// Commit provides a mock function with given fields: _a0, _a1
+func (_m *Storage) Commit(_a0 context.Context, _a1 *jetflow.Request) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) error); ok {
-		r0 = rf(ctx, call)
+	if rf, ok := ret.Get(0).(func(context.Context, *jetflow.Request) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -42,15 +42,15 @@ type Storage_Commit_Call struct {
 }
 
 // Commit is a helper method to define mock.On call
-//   - ctx context.Context
-//   - call jetflow.Request
-func (_e *Storage_Expecter) Commit(ctx interface{}, call interface{}) *Storage_Commit_Call {
-	return &Storage_Commit_Call{Call: _e.mock.On("Commit", ctx, call)}
+//   - _a0 context.Context
+//   - _a1 *jetflow.Request
+func (_e *Storage_Expecter) Commit(_a0 interface{}, _a1 interface{}) *Storage_Commit_Call {
+	return &Storage_Commit_Call{Call: _e.mock.On("Commit", _a0, _a1)}
 }
 
-func (_c *Storage_Commit_Call) Run(run func(ctx context.Context, call jetflow.Request)) *Storage_Commit_Call {
+func (_c *Storage_Commit_Call) Run(run func(_a0 context.Context, _a1 *jetflow.Request)) *Storage_Commit_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(jetflow.Request))
+		run(args[0].(context.Context), args[1].(*jetflow.Request))
 	})
 	return _c
 }
@@ -60,30 +60,30 @@ func (_c *Storage_Commit_Call) Return(_a0 error) *Storage_Commit_Call {
 	return _c
 }
 
-func (_c *Storage_Commit_Call) RunAndReturn(run func(context.Context, jetflow.Request) error) *Storage_Commit_Call {
+func (_c *Storage_Commit_Call) RunAndReturn(run func(context.Context, *jetflow.Request) error) *Storage_Commit_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Get provides a mock function with given fields: ctx, call
-func (_m *Storage) Get(ctx context.Context, call jetflow.Request) (jetflow.OperatorHandler, error) {
-	ret := _m.Called(ctx, call)
+// Get provides a mock function with given fields: _a0, _a1
+func (_m *Storage) Get(_a0 context.Context, _a1 *jetflow.Request) (jetflow.OperatorHandler, error) {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 jetflow.OperatorHandler
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) (jetflow.OperatorHandler, error)); ok {
-		return rf(ctx, call)
+	if rf, ok := ret.Get(0).(func(context.Context, *jetflow.Request) (jetflow.OperatorHandler, error)); ok {
+		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) jetflow.OperatorHandler); ok {
-		r0 = rf(ctx, call)
+	if rf, ok := ret.Get(0).(func(context.Context, *jetflow.Request) jetflow.OperatorHandler); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(jetflow.OperatorHandler)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, jetflow.Request) error); ok {
-		r1 = rf(ctx, call)
+	if rf, ok := ret.Get(1).(func(context.Context, *jetflow.Request) error); ok {
+		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -97,15 +97,15 @@ type Storage_Get_Call struct {
 }
 
 // Get is a helper method to define mock.On call
-//   - ctx context.Context
-//   - call jetflow.Request
-func (_e *Storage_Expecter) Get(ctx interface{}, call interface{}) *Storage_Get_Call {
-	return &Storage_Get_Call{Call: _e.mock.On("Get", ctx, call)}
+//   - _a0 context.Context
+//   - _a1 *jetflow.Request
+func (_e *Storage_Expecter) Get(_a0 interface{}, _a1 interface{}) *Storage_Get_Call {
+	return &Storage_Get_Call{Call: _e.mock.On("Get", _a0, _a1)}
 }
 
-func (_c *Storage_Get_Call) Run(run func(ctx context.Context, call jetflow.Request)) *Storage_Get_Call {
+func (_c *Storage_Get_Call) Run(run func(_a0 context.Context, _a1 *jetflow.Request)) *Storage_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(jetflow.Request))
+		run(args[0].(context.Context), args[1].(*jetflow.Request))
 	})
 	return _c
 }
@@ -115,18 +115,18 @@ func (_c *Storage_Get_Call) Return(_a0 jetflow.OperatorHandler, _a1 error) *Stor
 	return _c
 }
 
-func (_c *Storage_Get_Call) RunAndReturn(run func(context.Context, jetflow.Request) (jetflow.OperatorHandler, error)) *Storage_Get_Call {
+func (_c *Storage_Get_Call) RunAndReturn(run func(context.Context, *jetflow.Request) (jetflow.OperatorHandler, error)) *Storage_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Prepare provides a mock function with given fields: ctx, call
-func (_m *Storage) Prepare(ctx context.Context, call jetflow.Request) error {
-	ret := _m.Called(ctx, call)
+// Prepare provides a mock function with given fields: _a0, _a1
+func (_m *Storage) Prepare(_a0 context.Context, _a1 *jetflow.Request) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) error); ok {
-		r0 = rf(ctx, call)
+	if rf, ok := ret.Get(0).(func(context.Context, *jetflow.Request) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -140,15 +140,15 @@ type Storage_Prepare_Call struct {
 }
 
 // Prepare is a helper method to define mock.On call
-//   - ctx context.Context
-//   - call jetflow.Request
-func (_e *Storage_Expecter) Prepare(ctx interface{}, call interface{}) *Storage_Prepare_Call {
-	return &Storage_Prepare_Call{Call: _e.mock.On("Prepare", ctx, call)}
+//   - _a0 context.Context
+//   - _a1 *jetflow.Request
+func (_e *Storage_Expecter) Prepare(_a0 interface{}, _a1 interface{}) *Storage_Prepare_Call {
+	return &Storage_Prepare_Call{Call: _e.mock.On("Prepare", _a0, _a1)}
 }
 
-func (_c *Storage_Prepare_Call) Run(run func(ctx context.Context, call jetflow.Request)) *Storage_Prepare_Call {
+func (_c *Storage_Prepare_Call) Run(run func(_a0 context.Context, _a1 *jetflow.Request)) *Storage_Prepare_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(jetflow.Request))
+		run(args[0].(context.Context), args[1].(*jetflow.Request))
 	})
 	return _c
 }
@@ -158,18 +158,18 @@ func (_c *Storage_Prepare_Call) Return(_a0 error) *Storage_Prepare_Call {
 	return _c
 }
 
-func (_c *Storage_Prepare_Call) RunAndReturn(run func(context.Context, jetflow.Request) error) *Storage_Prepare_Call {
+func (_c *Storage_Prepare_Call) RunAndReturn(run func(context.Context, *jetflow.Request) error) *Storage_Prepare_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Rollback provides a mock function with given fields: ctx, call
-func (_m *Storage) Rollback(ctx context.Context, call jetflow.Request) error {
-	ret := _m.Called(ctx, call)
+// Rollback provides a mock function with given fields: _a0, _a1
+func (_m *Storage) Rollback(_a0 context.Context, _a1 *jetflow.Request) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, jetflow.Request) error); ok {
-		r0 = rf(ctx, call)
+	if rf, ok := ret.Get(0).(func(context.Context, *jetflow.Request) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -183,15 +183,15 @@ type Storage_Rollback_Call struct {
 }
 
 // Rollback is a helper method to define mock.On call
-//   - ctx context.Context
-//   - call jetflow.Request
-func (_e *Storage_Expecter) Rollback(ctx interface{}, call interface{}) *Storage_Rollback_Call {
-	return &Storage_Rollback_Call{Call: _e.mock.On("Rollback", ctx, call)}
+//   - _a0 context.Context
+//   - _a1 *jetflow.Request
+func (_e *Storage_Expecter) Rollback(_a0 interface{}, _a1 interface{}) *Storage_Rollback_Call {
+	return &Storage_Rollback_Call{Call: _e.mock.On("Rollback", _a0, _a1)}
 }
 
-func (_c *Storage_Rollback_Call) Run(run func(ctx context.Context, call jetflow.Request)) *Storage_Rollback_Call {
+func (_c *Storage_Rollback_Call) Run(run func(_a0 context.Context, _a1 *jetflow.Request)) *Storage_Rollback_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(jetflow.Request))
+		run(args[0].(context.Context), args[1].(*jetflow.Request))
 	})
 	return _c
 }
@@ -201,7 +201,7 @@ func (_c *Storage_Rollback_Call) Return(_a0 error) *Storage_Rollback_Call {
 	return _c
 }
 
-func (_c *Storage_Rollback_Call) RunAndReturn(run func(context.Context, jetflow.Request) error) *Storage_Rollback_Call {
+func (_c *Storage_Rollback_Call) RunAndReturn(run func(context.Context, *jetflow.Request) error) *Storage_Rollback_Call {
 	_c.Call.Return(run)
 	return _c
 }

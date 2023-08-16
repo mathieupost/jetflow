@@ -25,7 +25,7 @@ func NewExecutor(storage Storage, client OperatorClient) *Executor {
 	return w
 }
 
-func (w *Executor) Handle(ctx context.Context, req Request) Response {
+func (w *Executor) Handle(ctx context.Context, req *Request) *Response {
 	switch req.Method {
 	case string(MethodPrepare):
 		err := w.storage.Prepare(ctx, req)
@@ -41,7 +41,7 @@ func (w *Executor) Handle(ctx context.Context, req Request) Response {
 	}
 }
 
-func (w *Executor) handleCall(ctx context.Context, call Request) Response {
+func (w *Executor) handleCall(ctx context.Context, call *Request) *Response {
 	originalRequestID := call.RequestID
 
 	retryCount := 0
@@ -97,7 +97,7 @@ func (w *Executor) broadcast(ctx context.Context, method Method, operators map[s
 	var wg sync.WaitGroup
 	for name, instances := range operators {
 		for id := range instances {
-			request := Request{
+			request := &Request{
 				Name:   name,
 				ID:     id,
 				Method: string(method),
@@ -117,7 +117,7 @@ func (w *Executor) broadcast(ctx context.Context, method Method, operators map[s
 	return success.Load()
 }
 
-func (w *Executor) handle(ctx context.Context, call Request) Response {
+func (w *Executor) handle(ctx context.Context, call *Request) *Response {
 	// (mis)use the context to keep track of the involved operators.
 	involvedOperators := map[string]map[string]bool{}
 	ctx = ContextWithInvolvedOperators(ctx, involvedOperators)

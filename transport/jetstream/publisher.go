@@ -39,9 +39,9 @@ func NewPublisher(ctx context.Context, jetstream jetstream.JetStream) *Publisher
 	return d
 }
 
-func (d *Publisher) Publish(ctx context.Context, call jetflow.Request) (chan jetflow.Response, error) {
+func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *jetflow.Response, error) {
 	// Setup the channel to which the response will be sent.
-	responseChan := make(chan jetflow.Response, 10)
+	responseChan := make(chan *jetflow.Response)
 	d.responseChannels.Store(call.RequestID, responseChan)
 
 	// Marshal the message
@@ -104,8 +104,8 @@ func (d *Publisher) initConsumer(ctx context.Context) error {
 
 	_, err = consumer.Consume(func(msg jetstream.Msg) {
 		// Unmarshal the response
-		var response jetflow.Response
-		err := json.Unmarshal(msg.Data(), &response)
+		response := &jetflow.Response{}
+		err := json.Unmarshal(msg.Data(), response)
 		if err != nil {
 			log.Fatalln("unmarshal result", err, string(msg.Data()))
 		}
@@ -124,12 +124,12 @@ func (d *Publisher) initConsumer(ctx context.Context) error {
 	return nil
 }
 
-func (d *Publisher) handleResponse(response jetflow.Response) {
+func (d *Publisher) handleResponse(response *jetflow.Response) {
 	c, ok := d.responseChannels.LoadAndDelete(response.RequestID)
 	if !ok {
 		log.Fatalln("response not found", response)
 	}
 
-	responseChan := c.(chan jetflow.Response)
+	responseChan := c.(chan *jetflow.Response)
 	responseChan <- response
 }

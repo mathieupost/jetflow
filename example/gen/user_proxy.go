@@ -39,7 +39,7 @@ func (u *UserProxy) TransferBalance(ctx context.Context, u2 types.User, amount i
 	if err != nil {
 		return errors.Wrap(err, "marshalling TransferBalance args")
 	}
-	call := jetflow.Request{
+	call := &jetflow.Request{
 		Name:   "User",
 		ID:     u.id,
 		Method: "TransferBalance",
@@ -59,7 +59,7 @@ func (u *UserProxy) AddBalance(ctx context.Context, amount int) error {
 	if err != nil {
 		return errors.Wrap(err, "marshalling TransferBalance args")
 	}
-	call := jetflow.Request{
+	call := &jetflow.Request{
 		Name:   "User",
 		ID:     u.id,
 		Method: "AddBalance",

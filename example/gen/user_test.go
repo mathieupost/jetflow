@@ -27,7 +27,7 @@ func TestTransferBalance(t *testing.T) {
 		Amount: 10,
 	}
 	data, err := json.Marshal(args)
-	call := jetflow.Request{
+	call := &jetflow.Request{
 		Method: "TransferBalance",
 		Args:   data,
 	}

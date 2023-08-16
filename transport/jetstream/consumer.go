@@ -72,8 +72,8 @@ func (r *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
 	clientID := msg.Headers().Get("ClientID")
 
 	// Unmarshal the method and parameters.
-	var call jetflow.Request
-	err := json.Unmarshal(msg.Data(), &call)
+	call := &jetflow.Request{}
+	err := json.Unmarshal(msg.Data(), call)
 	if err != nil {
 		log.Fatalln("unmarshal request", err, string(msg.Data()))
 	}

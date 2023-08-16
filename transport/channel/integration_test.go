@@ -15,8 +15,8 @@ func TestCall(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 
-	requestChan := make(chan jetflow.Request, 100)
-	responseChan := make(chan jetflow.Response, 100)
+	requestChan := make(chan *jetflow.Request)
+	responseChan := make(chan *jetflow.Response)
 
 	factoryMapping := gen.ProxyFactoryMapping()
 	publisher := NewPublisher(requestChan, responseChan)

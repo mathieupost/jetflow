@@ -20,13 +20,13 @@ func TestProcessRequest(t *testing.T) {
 	type test struct {
 		worker  jetflow.RequestHandler
 		storage *mocks.Storage
-		handler *mocks.Handler
+		handler *mocks.OperatorHandler
 		client  *mocks.OperatorClient
 	}
 
 	setup := func(t *testing.T) test {
 		storage := mocks.NewStorage(t)
-		handler := mocks.NewHandler(t)
+		handler := mocks.NewOperatorHandler(t)
 		client := mocks.NewOperatorClient(t)
 
 		worker := jetflow.NewExecutor(storage, client)
@@ -36,7 +36,7 @@ func TestProcessRequest(t *testing.T) {
 
 	ANY := mock.Anything
 	match := func(method jetflow.Method) interface{} {
-		return mock.MatchedBy(func(m jetflow.Request) bool {
+		return mock.MatchedBy(func(m *jetflow.Request) bool {
 			return m.Method == string(method)
 		})
 	}
@@ -49,7 +49,7 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
 
-		request := jetflow.Request{
+		request := &jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   t.Name(),
 		}
@@ -65,7 +65,7 @@ func TestProcessRequest(t *testing.T) {
 		tt.storage.EXPECT().Get(ANY, ANY).Return(tt.handler, nil).Once()
 		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
 
-		request := jetflow.Request{
+		request := &jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   "child",
 		}
@@ -87,7 +87,7 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
 
-		request := jetflow.Request{
+		request := &jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   t.Name(),
 		}
@@ -104,7 +104,7 @@ func TestProcessRequest(t *testing.T) {
 		err := errors.New("handle error")
 		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, err).Once()
 
-		request := jetflow.Request{
+		request := &jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   "child",
 		}
@@ -127,7 +127,7 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodPrepare)).Return(nil, nil).Once()
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Once()
 
-		request := jetflow.Request{
+		request := &jetflow.Request{
 			OperationID: t.Name(),
 			RequestID:   t.Name(),
 		}

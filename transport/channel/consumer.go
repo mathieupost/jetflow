@@ -8,12 +8,12 @@ import (
 )
 
 type Consumer struct {
-	inbox   chan jetflow.Request
-	outbox  chan jetflow.Response
+	inbox   chan *jetflow.Request
+	outbox  chan *jetflow.Response
 	handler jetflow.RequestHandler
 }
 
-func NewConsumer(inbox chan jetflow.Request, outbox chan jetflow.Response, handler jetflow.RequestHandler) *Consumer {
+func NewConsumer(inbox chan *jetflow.Request, outbox chan *jetflow.Response, handler jetflow.RequestHandler) *Consumer {
 	s := &Consumer{
 		inbox:   inbox,
 		outbox:  outbox,
