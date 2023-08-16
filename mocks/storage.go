@@ -211,8 +211,7 @@ func (_c *Storage_Rollback_Call) RunAndReturn(run func(context.Context, jetflow.
 func NewStorage(t interface {
 	mock.TestingT
 	Cleanup(func())
-},
-) *Storage {
+}) *Storage {
 	mock := &Storage{}
 	mock.Mock.Test(t)
 
