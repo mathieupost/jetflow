@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mathieupost/jetflow"
-	"github.com/mathieupost/jetflow/example/gen"
+	"github.com/mathieupost/jetflow/example/types/gen"
 	"github.com/mathieupost/jetflow/storage/memory"
 	"github.com/mathieupost/jetflow/transport"
 )

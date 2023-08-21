@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mathieupost/jetflow"
-	"github.com/mathieupost/jetflow/example/gen"
 	"github.com/mathieupost/jetflow/example/types"
+	"github.com/mathieupost/jetflow/example/types/gen"
 )
 
 func TestClientFind(t *testing.T) {

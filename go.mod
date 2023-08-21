@@ -15,7 +15,7 @@ require (
 	github.com/chigopher/pathlib v0.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/iancoleman/strcase v0.2.0 // indirect
+	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jinzhu/copier v0.3.5 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect

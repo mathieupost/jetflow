@@ -17,13 +17,13 @@ const (
 )
 
 type Request struct {
-	OperationID string
-	RequestID   string
+	OperationID string `json:"o"`
+	RequestID   string `json:"r"`
 
-	Name   string
-	ID     string
-	Method string
-	Args   []byte
+	Name   string `json:"n"`
+	ID     string `json:"i"`
+	Method string `json:"m"`
+	Args   []byte `json:"a"`
 }
 
 // String returns a string representation of the request.
@@ -52,11 +52,11 @@ type Response struct {
 }
 
 type jsonResponse struct {
-	RequestID         string
-	InvolvedOperators map[string]map[string]bool
+	RequestID         string                     `json:"r"`
+	InvolvedOperators map[string]map[string]bool `json:"o"`
 
-	Values []byte
-	Error  string
+	Values []byte `json:"v"`
+	Error  string `json:"e"`
 }
 
 func (r Response) MarshalJSON() ([]byte, error) {
