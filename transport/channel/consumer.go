@@ -3,17 +3,19 @@ package channel
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/propagation"
+
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/log"
 )
 
 type Consumer struct {
-	inbox   chan *jetflow.Request
+	inbox   chan requestWithHeaders
 	outbox  chan *jetflow.Response
 	handler jetflow.RequestHandler
 }
 
-func NewConsumer(inbox chan *jetflow.Request, outbox chan *jetflow.Response, handler jetflow.RequestHandler) *Consumer {
+func NewConsumer(inbox chan requestWithHeaders, outbox chan *jetflow.Response, handler jetflow.RequestHandler) *Consumer {
 	s := &Consumer{
 		inbox:   inbox,
 		outbox:  outbox,
@@ -32,7 +34,12 @@ func (w *Consumer) processInbox(ctx context.Context) {
 		select {
 		case req := <-w.inbox:
 			go func() {
-				w.outbox <- w.handler.Handle(ctx, req)
+				// Extract the trace context from the message header.
+				propagator := propagation.TraceContext{}
+				carrier := propagation.HeaderCarrier(req.headers)
+				ctx := propagator.Extract(ctx, carrier)
+
+				w.outbox <- w.handler.Handle(ctx, req.Request)
 			}()
 		case <-ctx.Done():
 			loop = false

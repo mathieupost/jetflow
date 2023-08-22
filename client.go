@@ -2,12 +2,12 @@ package jetflow
 
 import (
 	"context"
-	"math"
-	"math/rand"
 	"reflect"
-	"strconv"
 
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/mathieupost/jetflow/log"
 )
@@ -27,9 +27,27 @@ func NewClient(mapping ProxyFactoryMapping, dispatcher Publisher) *Client {
 }
 
 func (c *Client) Call(ctx context.Context, call *Request) (res []byte, err error) {
-	requestID := strconv.Itoa(rand.Intn(math.MaxInt))
-	call.OperationID = OperationIDFromContext(ctx, requestID)
-	call.RequestID = requestID
+	originalctx := ctx
+	operatorspan, ok := ctx.Value("SPAN").(*trace.Span)
+	if ok {
+		(*operatorspan).End()
+	}
+	defer func() {
+		if ok {
+			_, *operatorspan = otel.Tracer("").Start(originalctx, "operator.Handle")
+		}
+	}()
+
+	ctx, span := otel.Tracer("client").Start(ctx, "jetflow.Client.Call")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("operator", call.Name),
+		attribute.String("id", call.ID),
+	)
+
+	spanID := span.SpanContext().SpanID().String()
+	call.OperationID = OperationIDFromContext(ctx, spanID)
+	call.RequestID = spanID
 
 	log.Println("Client.Call:\n", call)
 

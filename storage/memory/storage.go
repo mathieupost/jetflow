@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/huandu/go-clone"
+	"go.opentelemetry.io/otel"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/log"
@@ -32,6 +33,9 @@ func NewStorage(mapping jetflow.HandlerFactoryMapping) *Storage {
 }
 
 func (s *Storage) Get(ctx context.Context, call *jetflow.Request) (jetflow.OperatorHandler, error) {
+	ctx, span := otel.Tracer("").Start(ctx, "memory.Storage.Get")
+	defer span.End()
+
 	log.Println("Storage.Get\n", call)
 	return s.get(ctx, call.Name, call.ID, call.OperationID), nil
 }
@@ -69,6 +73,9 @@ func (s *Storage) get(ctx context.Context, name string, id string, req string) j
 }
 
 func (s *Storage) Prepare(ctx context.Context, call *jetflow.Request) error {
+	ctx, span := otel.Tracer("").Start(ctx, "memory.Storage.Prepare")
+	defer span.End()
+
 	prepared := s.prepare(ctx, call.Name, call.ID, call.OperationID)
 	if !prepared {
 		return errors.New("failed to prepare")
@@ -108,6 +115,9 @@ func (s *Storage) prepare(ctx context.Context, name string, id string, req strin
 }
 
 func (s *Storage) Commit(ctx context.Context, call *jetflow.Request) error {
+	ctx, span := otel.Tracer("").Start(ctx, "memory.Storage.Commit")
+	defer span.End()
+
 	s.commit(ctx, call.Name, call.ID, call.OperationID)
 	return nil
 }
@@ -138,6 +148,9 @@ func (s *Storage) commit(ctx context.Context, name string, id string, req string
 }
 
 func (s *Storage) Rollback(ctx context.Context, call *jetflow.Request) error {
+	ctx, span := otel.Tracer("").Start(ctx, "memory.Storage.Rollback")
+	defer span.End()
+
 	s.rollback(ctx, call.Name, call.ID, call.OperationID)
 	return nil
 }

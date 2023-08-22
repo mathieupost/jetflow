@@ -9,14 +9,24 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/example/types/gen"
+	"github.com/mathieupost/jetflow/log"
 	"github.com/mathieupost/jetflow/storage/memory"
+	"github.com/mathieupost/jetflow/tracing"
 	"github.com/mathieupost/jetflow/transport"
 )
 
 func TestCall(t *testing.T) {
+	tp, shutdown, err := tracing.NewProvider()
+	if err != nil {
+		log.Fatal("new tracing provider", err.Error())
+	}
+	defer shutdown()
+	otel.SetTracerProvider(tp)
+
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
@@ -34,6 +44,7 @@ func TestCall(t *testing.T) {
 	_ = NewConsumer(ctx, js, executor)
 
 	transport.IntegrationTest(t, ctx, client)
+	tp.ForceFlush(ctx)
 }
 
 func initJetStream(t *testing.T, ctx context.Context) jetstream.JetStream {

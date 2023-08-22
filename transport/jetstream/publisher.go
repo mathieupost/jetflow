@@ -10,6 +10,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/log"
@@ -40,6 +42,10 @@ func NewPublisher(ctx context.Context, jetstream jetstream.JetStream) *Publisher
 }
 
 func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *jetflow.Response, error) {
+	originalCtx := ctx
+	ctx, span := otel.Tracer("").Start(ctx, "jetstream.Publisher.Publish")
+	defer span.End()
+
 	// Setup the channel to which the response will be sent.
 	responseChan := make(chan *jetflow.Response)
 	d.responseChannels.Store(call.RequestID, responseChan)
@@ -55,6 +61,11 @@ func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *j
 	msg := nats.NewMsg(subject)
 	msg.Header.Set("ClientID", d.id)
 	msg.Data = payload
+
+	// Inject the trace context into the message header.
+	propagator := propagation.TraceContext{}
+	carrier := propagation.HeaderCarrier(msg.Header)
+	propagator.Inject(originalCtx, carrier)
 
 	// Publish the message to the OPERATOR stream.
 	_, err = d.jetstream.PublishMsg(ctx, msg)
@@ -88,7 +99,7 @@ func (d *Publisher) initStreams(ctx context.Context) error {
 }
 
 func (d *Publisher) initConsumer(ctx context.Context) error {
-	log.Println("Client.initConsumer")
+	log.Println("Publisher.initConsumer")
 	consumer, err := d.jetstream.CreateOrUpdateConsumer(
 		ctx,
 		STREAM_NAME_CLIENT,

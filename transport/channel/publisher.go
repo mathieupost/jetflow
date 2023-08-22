@@ -2,7 +2,11 @@ package channel
 
 import (
 	"context"
+	"net/http"
 	"sync"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/log"
@@ -11,12 +15,17 @@ import (
 var _ jetflow.Publisher = (*Publisher)(nil)
 
 type Publisher struct {
-	outbox           chan *jetflow.Request
+	outbox           chan requestWithHeaders
 	inbox            chan *jetflow.Response
 	responseChannels sync.Map
 }
 
-func NewPublisher(outbox chan *jetflow.Request, inbox chan *jetflow.Response) *Publisher {
+type requestWithHeaders struct {
+	*jetflow.Request
+	headers http.Header
+}
+
+func NewPublisher(outbox chan requestWithHeaders, inbox chan *jetflow.Response) *Publisher {
 	d := &Publisher{
 		outbox:           outbox,
 		inbox:            inbox,
@@ -27,11 +36,24 @@ func NewPublisher(outbox chan *jetflow.Request, inbox chan *jetflow.Response) *P
 }
 
 func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *jetflow.Response, error) {
+	ctx, span := otel.Tracer("").Start(ctx, "channel.Publisher.Publish")
+	defer span.End()
+
 	// Setup the channel to which the response will be sent.
 	responseChan := make(chan *jetflow.Response)
 	d.responseChannels.Store(call.RequestID, responseChan)
 
-	d.outbox <- call
+	req := requestWithHeaders{
+		Request: call,
+		headers: map[string][]string{},
+	}
+
+	// Inject the trace context into the message header.
+	propagator := propagation.TraceContext{}
+	carrier := propagation.HeaderCarrier(req.headers)
+	propagator.Inject(ctx, carrier)
+
+	d.outbox <- req
 
 	return responseChan, nil
 }

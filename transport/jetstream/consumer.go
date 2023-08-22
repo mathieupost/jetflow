@@ -8,6 +8,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/log"
@@ -54,6 +56,11 @@ func (r *Consumer) initConsumer(ctx context.Context) error {
 	log.Println("Consumer.initConsumer", consumer.CachedInfo().Name)
 
 	consCtx, err := consumer.Consume(func(msg jetstream.Msg) {
+		// Extract the trace context from the message header.
+		propagator := propagation.TraceContext{}
+		carrier := propagation.HeaderCarrier(msg.Headers())
+		ctx := propagator.Extract(ctx, carrier)
+
 		go r.handle(ctx, msg)
 	})
 	if err != nil {
@@ -69,6 +76,9 @@ func (r *Consumer) initConsumer(ctx context.Context) error {
 }
 
 func (r *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
+	ctx, span := otel.Tracer("").Start(ctx, "jetstream.Consumer.handle")
+	defer span.End()
+
 	clientID := msg.Headers().Get("ClientID")
 
 	// Unmarshal the method and parameters.
@@ -93,6 +103,8 @@ func (r *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
 		log.Fatalln(response.RequestID, err.Error(), response)
 	}
 
+	ctx, pubspan := otel.Tracer("").Start(ctx, "jetstream.Consumer.publish")
+	defer pubspan.End()
 	// Send back to the caller.
 	subject := "CLIENT." + clientID
 	res := nats.NewMsg(subject)

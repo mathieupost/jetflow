@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
 
 	"github.com/mathieupost/jetflow/log"
 )
@@ -46,52 +47,69 @@ func (w *Executor) handleCall(ctx context.Context, call *Request) *Response {
 
 	retryCount := 0
 	for {
-		log.Println("Executor.processRequest\n", call)
+		res, success := w.try(ctx, call)
 
-		ctx := ContextWithOperationID(ctx, call.OperationID)
+		if !success {
+			// Create a new transaction id for the retry. Otherwise, the retry
+			// may use the old state of the involved operators.
+			transactionID := fmt.Sprintf("%s-%d", originalRequestID, retryCount)
+			transactionID = transactionID[len(transactionID)-12:]
+			log.Println(call.OperationID, "->", transactionID,
+				"original:", originalRequestID)
+			call.OperationID = transactionID
+			call.RequestID = transactionID
 
-		response := w.handle(ctx, call)
-		log.Println("Executor.processRequest response:", response, "\n", call)
+			retryCount++
+			continue // Retry
 
-		// The initial request has the same id as the operation.
-		isInitialRequest := call.OperationID == call.RequestID
-		if isInitialRequest {
-			operators := response.InvolvedOperators
-			success := response.Error == nil
-
-			// Try to prepare all involved operators.
-			if success {
-				prepared := w.broadcast(ctx, MethodPrepare, operators)
-				success = prepared
-			}
-
-			// Rollback and retry if we either got an error or if we could not
-			// prepare all involved operators.
-			if !success {
-				w.broadcast(ctx, MethodRollback, operators)
-
-				// Create a new transaction id for the retry. Otherwise, the retry
-				// may use the old state of the involved operators.
-				transactionID := fmt.Sprintf("%s-%d", originalRequestID, retryCount)
-				transactionID = transactionID[len(transactionID)-12:]
-				log.Println(call.OperationID, "->", transactionID,
-					"original:", originalRequestID)
-				call.OperationID = transactionID
-				call.RequestID = transactionID
-
-				retryCount++
-				continue // Retry
-			} else {
-				w.broadcast(ctx, MethodCommit, operators)
-			}
 		}
 
-		response.RequestID = originalRequestID
-		return response
+		res.RequestID = originalRequestID
+		return res
 	}
 }
 
+func (w *Executor) try(ctx context.Context, call *Request) (*Response, bool) {
+	log.Println("Executor.processRequest\n", call)
+
+	ctx = ContextWithOperationID(ctx, call.OperationID)
+
+	response := w.handle(ctx, call)
+	log.Println("Executor.processRequest response:", response, "\n", call)
+
+	// The initial request has the same id as the operation.
+	isInitialRequest := call.OperationID == call.RequestID
+	if isInitialRequest {
+		ctx, span := otel.Tracer("").Start(ctx, "jetflow.Executor.2pc")
+		defer span.End()
+
+		operators := response.InvolvedOperators
+		success := response.Error == nil
+
+		// Try to prepare all involved operators.
+		if success {
+			prepared := w.broadcast(ctx, MethodPrepare, operators)
+			success = prepared
+		}
+
+		// Rollback and retry if we either got an error or if we could not
+		// prepare all involved operators.
+		if !success {
+			w.broadcast(ctx, MethodRollback, operators)
+
+			return nil, false
+		} else {
+			w.broadcast(ctx, MethodCommit, operators)
+		}
+	}
+
+	return response, true
+}
+
 func (w *Executor) broadcast(ctx context.Context, method Method, operators map[string]map[string]bool) bool {
+	ctx, span := otel.Tracer("").Start(ctx, "jetflow.Executor.broadcast."+string(method))
+	defer span.End()
+
 	var success atomic.Bool
 	success.Store(true)
 	var wg sync.WaitGroup
@@ -128,6 +146,13 @@ func (w *Executor) handle(ctx context.Context, call *Request) *Response {
 		err = errors.Wrap(err, "getting operator")
 		return call.Response(ctx, nil, err)
 	}
+
+	_, span := otel.Tracer("").Start(ctx, "operator.Handle")
+	operatorspan := &span
+	ctx = context.WithValue(ctx, "SPAN", operatorspan)
+	defer func() {
+		(*operatorspan).End()
+	}()
 
 	res, err := operator.Handle(ctx, w.client, call)
 	if err != nil {
