@@ -95,11 +95,11 @@ func (w *Executor) try(ctx context.Context, call *Request) (*Response, bool) {
 		// Rollback and retry if we either got an error or if we could not
 		// prepare all involved operators.
 		if !success {
-			w.broadcast(ctx, MethodRollback, operators)
+			go w.broadcast(ctx, MethodRollback, operators)
 
 			return nil, false
 		} else {
-			w.broadcast(ctx, MethodCommit, operators)
+			go w.broadcast(ctx, MethodCommit, operators)
 		}
 	}
 
