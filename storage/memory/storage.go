@@ -46,11 +46,11 @@ func (s *Storage) get(ctx context.Context, name string, id string, req string) j
 	requestOperatorKey := operatorKey + "." + req
 
 	// Load the operator version for the current request.
+	committedVersion := s.loadOrCreateVersion(operatorKey)
 	operator, ok := s.versionOperatorMapping.Load(requestOperatorKey)
 	if !ok {
 		log.Println("Storage.Get clone", requestOperatorKey)
 		// Clone the committed version if there was no previous version for this request.
-		committedVersion := s.loadOrCreateVersion(operatorKey)
 		operator, ok = s.versionOperatorMapping.Load(committedVersion.key)
 		if !ok {
 			log.Println("Storage.Get create", requestOperatorKey)
@@ -67,6 +67,12 @@ func (s *Storage) get(ctx context.Context, name string, id string, req string) j
 			base: committedVersion.key,
 			key:  requestOperatorKey,
 		})
+	} else {
+		v, _ := s.keyVersionMapping.Load(requestOperatorKey)
+		requestVersion := v.(version)
+		if requestVersion.base != committedVersion.key {
+			return nil, errors.New("outdated version")
+		}
 	}
 
 	return operator.(jetflow.OperatorHandler)
