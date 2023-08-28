@@ -85,6 +85,28 @@ func (u *UserProxy) AddBalance(
 	return errors.Wrap(err, "call client UserProxy.AddBalance")
 }
 
+type User_GetBalance_Result struct {
+	Res0 int
+}
+
+func (u *UserProxy) GetBalance(ctx context.Context) (int, error) {
+	call := &jetflow.Request{
+		Name:   "User",
+		ID:     u.id,
+		Method: "GetBalance",
+	}
+	res, err := u.client.Call(ctx, call)
+	if err != nil {
+		return 0, errors.Wrap(err, "call client UserProxy.GetBalance")
+	}
+	var result User_GetBalance_Result
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return 0, errors.Wrap(err, "Unmarshalling User.GetBalance result")
+	}
+	return result.Res0, nil
+}
+
 // MarshalJSON implements json.Marshaler.
 func (u UserProxy) MarshalJSON() ([]byte, error) {
 	return json.Marshal(u.id)

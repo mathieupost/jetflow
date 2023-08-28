@@ -3,19 +3,19 @@ package types
 import (
 	"context"
 
-	"github.com/pkg/errors"
-
 	"github.com/mathieupost/jetflow"
+	"github.com/pkg/errors"
 )
 
 type User interface {
 	jetflow.Operator
 	TransferBalance(ctx context.Context, u2 User, amount int) error
 	AddBalance(ctx context.Context, amount int) error
+	GetBalance(ctx context.Context) (int, error)
 }
 
 func NewUser(id string) User {
-	return &user{id: id, balance: 10}
+	return &user{id: id, balance: 1000000}
 }
 
 var _ jetflow.Operator = (*user)(nil)
@@ -32,7 +32,7 @@ func (u *user) ID() string {
 
 func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err error) {
 	if amount < 0 {
-		return errors.New("negative amount")
+		return errors.New("amount cannot be negative")
 	}
 
 	if u.balance < amount {
@@ -44,16 +44,21 @@ func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err er
 		return errors.Wrap(err, "add balance to u2")
 	}
 
-	err = u.AddBalance(ctx, -amount)
-	if err != nil {
-		return errors.Wrap(err, "subtract balance from u")
-	}
+	u.balance -= amount
 
 	return nil
 }
 
 func (u *user) AddBalance(ctx context.Context, amount int) error {
+	if amount < 0 {
+		return errors.New("amount cannot be negative")
+	}
+
 	u.balance += amount
 
 	return nil
+}
+
+func (u *user) GetBalance(ctx context.Context) (int, error) {
+	return u.balance, nil
 }

@@ -54,6 +54,17 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 		)
 		return nil, errors.Wrap(err, "calling User.AddBalance")
 
+	case "GetBalance":
+		res0, err := o.instance.GetBalance(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "calling User.GetBalance")
+		}
+		result := User_GetBalance_Result{
+			Res0: res0,
+		}
+		res, err = json.Marshal(result)
+		return res, errors.Wrap(err, "marshaling User_GetBalance_Result")
+
 	default:
 		return nil, errors.Errorf("unknown method %s", call.Method)
 	}
