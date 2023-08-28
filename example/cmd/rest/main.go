@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/tracing"
 	"github.com/mathieupost/jetflow/transport/jetstream"
@@ -45,8 +46,20 @@ func main() {
 	client := jetflow.NewClient(factoryMapping, publisher)
 
 	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RedirectSlashes)
+
 	r.Route("/users/{user}", func(r chi.Router) {
 		r.Use(Operator[types.User](client, "user"))
+
+		r.Get("/GetBalance", func(w http.ResponseWriter, r *http.Request) {
+			user := r.Context().Value("user").(types.User)
+			balance, _ := user.GetBalance(r.Context())
+			if err != nil {
+				log.Fatal(r.URL.Path, err.Error())
+			}
+			fmt.Fprintf(w, "{balance:%d}", balance)
+		})
 
 		r.Route("/TransferBalance/{user2}/{amount}", func(r chi.Router) {
 			r.Use(Operator[types.User](client, "user2"))
@@ -56,7 +69,10 @@ func main() {
 				user := r.Context().Value("user").(types.User)
 				user2 := r.Context().Value("user2").(types.User)
 				amount := r.Context().Value("amount").(int)
-				user.TransferBalance(r.Context(), user2, amount)
+				err := user.TransferBalance(r.Context(), user2, amount)
+				if err != nil {
+					log.Fatal(r.URL.Path, err.Error())
+				}
 			})
 		})
 	})
