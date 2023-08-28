@@ -25,14 +25,14 @@ type requestWithHeaders struct {
 	headers http.Header
 }
 
-func NewPublisher(outbox chan requestWithHeaders, inbox chan *jetflow.Response) *Publisher {
+func NewPublisher() (*Publisher, chan requestWithHeaders, chan *jetflow.Response) {
 	d := &Publisher{
-		outbox:           outbox,
-		inbox:            inbox,
+		outbox:           make(chan requestWithHeaders),
+		inbox:            make(chan *jetflow.Response),
 		responseChannels: sync.Map{},
 	}
 	go d.processResponses()
-	return d
+	return d, d.outbox, d.inbox
 }
 
 func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *jetflow.Response, error) {
