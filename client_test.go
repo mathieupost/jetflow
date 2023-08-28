@@ -8,20 +8,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mathieupost/jetflow"
-	"github.com/mathieupost/jetflow/example/types"
-	"github.com/mathieupost/jetflow/example/types/gen"
 )
+
+type TestType interface{}
+
+type TestTypeProxy struct {
+	id string
+}
+
+func (t TestTypeProxy) ID() string {
+	return t.id
+}
 
 func TestClientFind(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	mapping := gen.ProxyFactoryMapping()
+	mapping := jetflow.ProxyFactoryMapping{
+		"TestType": func(id string, client jetflow.OperatorClient) jetflow.Operator {
+			return &TestTypeProxy{id: id}
+		},
+	}
 	var client jetflow.OperatorClient = jetflow.NewClient(mapping, nil)
-	var testUser types.User
-	err := client.Find(ctx, "test_user", &testUser)
+	var testType TestType
+	err := client.Find(ctx, "test_type", &testType)
 	require.NoError(t, err)
 	require.NoError(t, ctx.Err())
-	require.NotNil(t, testUser)
-	require.IsType(t, &gen.UserProxy{}, testUser)
+	require.NotNil(t, testType)
+	require.IsType(t, &TestTypeProxy{}, testType)
 }
