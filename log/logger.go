@@ -8,7 +8,7 @@ import (
 
 var logger = zerolog.New(os.Stdout)
 
-const enabled = false
+const enabled = true
 
 func Print(v ...interface{}) {
 	if !enabled {

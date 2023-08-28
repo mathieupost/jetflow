@@ -1,0 +1,29 @@
+services:
+  jaeger:
+    image: jaegertracing/all-in-one
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - 16686:16686
+
+  nats:
+    image: nats
+    command: --js
+
+  consumer:
+    image: golang
+    command: go run ./example/cmd/consumer
+    environment:
+      - GOPATH=/gopath
+    volumes:
+      - ../:/go
+
+  api:
+    image: golang
+    command: go run ./example/cmd/rest
+    environment:
+      - GOPATH=/gopath
+    volumes:
+      - ../:/go
+    ports:
+      - 8080:8080

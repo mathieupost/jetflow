@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	tp, shutdown, err := tracing.NewProvider()
+	tp, shutdown, err := tracing.NewProvider("jaeger:4318")
 	if err != nil {
 		log.Fatal("new tracing provider", err.Error())
 	}

@@ -7,9 +7,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func NewProvider() (*trace.TracerProvider, func(), error) {
+func NewProvider(endpoint string) (*trace.TracerProvider, func(), error) {
 	ctx := context.Background()
-	exp, err := newExporter(ctx)
+	exp, err := newExporter(ctx, endpoint)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "creating trace exporter")
 	}
