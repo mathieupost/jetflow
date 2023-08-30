@@ -32,7 +32,7 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 		var args User_TransferBalance_Args
 		err := json.Unmarshal(call.Args, &args)
 		if err != nil {
-			return nil, errors.Wrap(err, "unmarshalling User.TransferBalance args")
+			return nil, errors.Wrap(err, "unmarshalling User_TransferBalance_Args")
 		}
 		args.U2.client = client
 		err = o.instance.TransferBalance(
@@ -40,22 +40,30 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 			args.U2,
 			args.Amount,
 		)
-		return nil, errors.Wrap(err, "calling User.TransferBalance")
+		if err != nil {
+			return nil, errors.Wrap(err, "calling User.TransferBalance")
+		}
+		return res, nil
 
 	case "AddBalance":
 		var args User_AddBalance_Args
 		err := json.Unmarshal(call.Args, &args)
 		if err != nil {
-			return nil, errors.Wrap(err, "unmarshalling User.AddBalance args")
+			return nil, errors.Wrap(err, "unmarshalling User_AddBalance_Args")
 		}
 		err = o.instance.AddBalance(
 			ctx,
 			args.Amount,
 		)
-		return nil, errors.Wrap(err, "calling User.AddBalance")
+		if err != nil {
+			return nil, errors.Wrap(err, "calling User.AddBalance")
+		}
+		return res, nil
 
 	case "GetBalance":
-		res0, err := o.instance.GetBalance(ctx)
+		res0, err = o.instance.GetBalance(
+			ctx,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "calling User.GetBalance")
 		}
@@ -63,7 +71,10 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 			Res0: res0,
 		}
 		res, err = json.Marshal(result)
-		return res, errors.Wrap(err, "marshaling User_GetBalance_Result")
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling User_GetBalance_Result")
+		}
+		return res, nil
 
 	default:
 		return nil, errors.Errorf("unknown method %s", call.Method)
