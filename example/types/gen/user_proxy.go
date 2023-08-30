@@ -39,24 +39,32 @@ func (u *UserProxy) TransferBalance(
 	ctx context.Context,
 	u2 types.User,
 	amount int,
-) error {
-
+) (err error) {
 	args := User_TransferBalance_Args{
 		u2.(*UserProxy),
 		amount,
 	}
+
 	data, err := json.Marshal(args)
 	if err != nil {
-		return errors.Wrap(err, "marshalling TransferBalance args")
+		err = errors.Wrap(err, "marshalling User_TransferBalance_Args")
+		return
 	}
+
 	call := &jetflow.Request{
 		Name:   "User",
 		ID:     u.id,
 		Method: "TransferBalance",
 		Args:   data,
 	}
+
 	_, err = u.client.Call(ctx, call)
-	return errors.Wrap(err, "call client UserProxy.TransferBalance")
+	if err != nil {
+		err = errors.Wrap(err, "call client UserProxy.TransferBalance")
+		return
+	}
+
+	return nil
 }
 
 type User_AddBalance_Args struct {
@@ -66,44 +74,59 @@ type User_AddBalance_Args struct {
 func (u *UserProxy) AddBalance(
 	ctx context.Context,
 	amount int,
-) error {
-
+) (err error) {
 	args := User_AddBalance_Args{
 		amount,
 	}
+
 	data, err := json.Marshal(args)
 	if err != nil {
-		return errors.Wrap(err, "marshalling AddBalance args")
+		err = errors.Wrap(err, "marshalling User_AddBalance_Args")
+		return
 	}
+
 	call := &jetflow.Request{
 		Name:   "User",
 		ID:     u.id,
 		Method: "AddBalance",
 		Args:   data,
 	}
+
 	_, err = u.client.Call(ctx, call)
-	return errors.Wrap(err, "call client UserProxy.AddBalance")
+	if err != nil {
+		err = errors.Wrap(err, "call client UserProxy.AddBalance")
+		return
+	}
+
+	return nil
 }
 
 type User_GetBalance_Result struct {
 	Res0 int
 }
 
-func (u *UserProxy) GetBalance(ctx context.Context) (int, error) {
+func (u *UserProxy) GetBalance(
+	ctx context.Context,
+) (res0 int, err error) {
 	call := &jetflow.Request{
 		Name:   "User",
 		ID:     u.id,
 		Method: "GetBalance",
 	}
-	res, err := u.client.Call(ctx, call)
+
+	var res []byte
+	res, err = u.client.Call(ctx, call)
 	if err != nil {
-		return 0, errors.Wrap(err, "call client UserProxy.GetBalance")
+		err = errors.Wrap(err, "call client UserProxy.GetBalance")
+		return
 	}
+
 	var result User_GetBalance_Result
 	err = json.Unmarshal(res, &result)
 	if err != nil {
-		return 0, errors.Wrap(err, "Unmarshalling User.GetBalance result")
+		return 0, errors.Wrap(err, "Unmarshalling User_GetBalance_Result")
 	}
+
 	return result.Res0, nil
 }
 

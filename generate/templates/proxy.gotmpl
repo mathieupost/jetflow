@@ -30,8 +30,11 @@ func New{{ $type.Name }}Proxy(id string, client jetflow.OperatorClient) jetflow.
 func (u *{{ $type.Name }}Proxy) ID() string {
 	return u.id
 }
+
 {{ range $i, $method := $type.Methods }}
-type {{ $type.Name }}_{{ $method.Name }}_Args struct {
+
+{{- if gt (len $method.Parameters) 0 }}
+type {{$type.Name}}_{{$method.Name}}_Args struct {
 {{- range $i, $param := $method.Parameters }}
 {{- if gt (len $param.Type.Methods) 0 }}
 	{{toCamel $param.Name}} *{{$param.Type.Name}}Proxy
@@ -40,8 +43,17 @@ type {{ $type.Name }}_{{ $method.Name }}_Args struct {
 {{- end }}
 {{- end }}
 }
+{{ end }}
 
-func (u *{{ $type.Name }}Proxy) {{ $method.Name }}(
+{{- if gt (len $method.Results) 0 }}
+type {{$type.Name}}_{{$method.Name}}_Result struct {
+{{- range $i, $param := $method.Results }}
+	Res{{$i}} {{$param.Type.Name}}
+{{- end }}
+}
+{{ end }}
+
+func (u *{{$type.Name}}Proxy) {{ $method.Name }}(
 	ctx context.Context,
 {{- range $i, $param := $method.Parameters }}
 {{- if gt (len $param.Type.Methods) 0 }}
@@ -50,9 +62,13 @@ func (u *{{ $type.Name }}Proxy) {{ $method.Name }}(
 	{{$param.Name}} {{$param.Type.Name}},
 {{- end }}
 {{- end }}
-) error {
+) (
+{{- range $i, $param := $method.Results -}}
+	res{{$i}} {{$param.Type.Name}}, {{ end -}}
+	err error) {
 
-	args := {{ $type.Name }}_{{ $method.Name }}_Args{
+{{- if gt (len $method.Parameters) 0 }}
+	args := {{$type.Name}}_{{$method.Name}}_Args{
 {{- range $i, $param := $method.Parameters }}
 {{- if gt (len $param.Type.Methods) 0 }}
 		{{$param.Name}}.(*{{$param.Type.Name}}Proxy),
@@ -61,18 +77,41 @@ func (u *{{ $type.Name }}Proxy) {{ $method.Name }}(
 {{- end }}
 {{- end }}
 	}
+
 	data, err := json.Marshal(args)
 	if err != nil {
-		return errors.Wrap(err, "marshalling {{ $method.Name }} args")
+		err = errors.Wrap(err, "marshalling {{$type.Name}}_{{$method.Name}}_Args")
+		return
 	}
+{{ end }}
 	call := &jetflow.Request{
 		Name:   "{{ $type.Name }}",
 		ID:     u.id,
 		Method: "{{ $method.Name }}",
+{{- if gt (len $method.Parameters) 0 }}
 		Args:   data,
+{{- end }}
 	}
-	_, err = u.client.Call(ctx, call)
-	return errors.Wrap(err, "call client {{ $type.Name }}Proxy.{{ $method.Name }}")
+{{ if gt (len $method.Results) 0 }}
+	var res []byte
+	res,
+{{- else }}
+	_,
+{{- end }} err = u.client.Call(ctx, call)
+	if err != nil {
+		err = errors.Wrap(err, "call client {{ $type.Name }}Proxy.{{ $method.Name }}")
+		return
+	}
+{{ if gt (len $method.Results) 0 }}
+	var result {{$type.Name}}_{{$method.Name}}_Result
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return 0, errors.Wrap(err, "Unmarshalling {{$type.Name}}_{{$method.Name}}_Result")
+	}
+{{ end }}
+	return {{ range $i, $param := $method.Results -}}
+		result.Res{{$i}}, {{ end -}}
+		nil
 }
 {{ end }}
 // MarshalJSON implements json.Marshaler.
