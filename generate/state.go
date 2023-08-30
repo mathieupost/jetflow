@@ -13,7 +13,7 @@ type Type struct {
 type Method struct {
 	Name       string
 	Parameters []*Parameter
-	Returns    []*Parameter
+	Results    []*Parameter
 }
 
 type Parameter struct {

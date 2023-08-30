@@ -13,14 +13,14 @@ func TestWriter(t *testing.T) {
 				{Name: "U2", Type: user},
 				{Name: "Amount", Type: &Type{Name: "int"}},
 			},
-			Returns: []*Parameter{},
+			Results: []*Parameter{},
 		},
 		{
 			Name: "AddBalance",
 			Parameters: []*Parameter{
 				{Name: "Amount", Type: &Type{Name: "int"}},
 			},
-			Returns: []*Parameter{},
+			Results: []*Parameter{},
 		},
 	}
 	s := &State{

@@ -104,9 +104,30 @@ func (p *Parser) ParseFile(path string) {
 									method := &Method{
 										Name:       name,
 										Parameters: []*Parameter{},
-										Returns:    []*Parameter{},
+										Results:    []*Parameter{},
 									}
 									typ.Methods = append(typ.Methods, method)
+									for _, r := range t.Results.List {
+										result := &Parameter{
+											Type: &Type{},
+										}
+										switch t := r.Type.(type) {
+										case *ast.SelectorExpr:
+											fmt.Printf("     SelectorExpr: %T, %v\n", t, t)
+										case *ast.Ident:
+											fmt.Printf("     Ident: %T, %v\n", t, t)
+											if typ, ok := state.Types[t.Name]; ok {
+												result.Type = typ
+											} else {
+												result.Type = &Type{Name: t.Name}
+											}
+										}
+										method.Results = append(method.Results, result)
+									}
+									retlen := len(method.Results) - 1
+									if method.Results[retlen].Type.Name == "error" {
+										method.Results = method.Results[:retlen]
+									}
 									for _, p := range t.Params.List {
 										name := p.Names[0].Name
 										if name == "ctx" {
