@@ -11,19 +11,19 @@ services:
     command: --js
 
   consumer:
-    image: golang
-    command: go run ./example/cmd/consumer
-    environment:
-      - GOPATH=/gopath
-    volumes:
-      - ../:/go
+    build:
+      context: ..
+      dockerfile: ./example/cmd/consumer/Dockerfile
+    depends_on:
+      - nats
+      - jaeger
 
   api:
-    image: golang
-    command: go run ./example/cmd/rest
-    environment:
-      - GOPATH=/gopath
-    volumes:
-      - ../:/go
+    build:
+      context: ..
+      dockerfile: ./example/cmd/rest/Dockerfile
+    depends_on:
+      - nats
+      - jaeger
     ports:
       - 8080:8080
