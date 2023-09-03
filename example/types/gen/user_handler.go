@@ -24,7 +24,7 @@ func NewUserHandler(id string) jetflow.OperatorHandler {
 	return &UserHandler{instance}
 }
 
-func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient, call *jetflow.Request) (res []byte, err error) {
+func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient, call *jetflow.Request) (bytes []byte, err error) {
 	log.Println("UserHandler.Handle\n", call)
 	switch call.Method {
 
@@ -35,7 +35,8 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 			return nil, errors.Wrap(err, "unmarshalling User_TransferBalance_Args")
 		}
 		args.U2.client = client
-		err = o.instance.TransferBalance(
+		res := User_TransferBalance_Result{}
+		res.Res0, res.Res1, err = o.instance.TransferBalance(
 			ctx,
 			args.U2,
 			args.Amount,
@@ -43,7 +44,11 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 		if err != nil {
 			return nil, errors.Wrap(err, "calling User.TransferBalance")
 		}
-		return res, nil
+		bytes, err = json.Marshal(res)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling User_TransferBalance_Result")
+		}
+		return bytes, nil
 
 	case "AddBalance":
 		var args User_AddBalance_Args
@@ -51,30 +56,33 @@ func (o *UserHandler) Handle(ctx context.Context, client jetflow.OperatorClient,
 		if err != nil {
 			return nil, errors.Wrap(err, "unmarshalling User_AddBalance_Args")
 		}
-		err = o.instance.AddBalance(
+		res := User_AddBalance_Result{}
+		res.Res0, err = o.instance.AddBalance(
 			ctx,
 			args.Amount,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "calling User.AddBalance")
 		}
-		return res, nil
+		bytes, err = json.Marshal(res)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling User_AddBalance_Result")
+		}
+		return bytes, nil
 
 	case "GetBalance":
-		res0, err = o.instance.GetBalance(
+		res := User_GetBalance_Result{}
+		res.Res0, err = o.instance.GetBalance(
 			ctx,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "calling User.GetBalance")
 		}
-		result := User_GetBalance_Result{
-			Res0: res0,
-		}
-		res, err = json.Marshal(result)
+		bytes, err = json.Marshal(res)
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling User_GetBalance_Result")
 		}
-		return res, nil
+		return bytes, nil
 
 	default:
 		return nil, errors.Errorf("unknown method %s", call.Method)

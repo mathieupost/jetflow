@@ -17,6 +17,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	natsjetstream "github.com/nats-io/nats.go/jetstream"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 
@@ -115,11 +116,18 @@ func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorC
 
 	var wg sync.WaitGroup
 	var times sync.Map
+	userIDs := map[string]bool{}
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		i := i
 		id1 := fmt.Sprintf("user%d", dist.Uint64())
 		id2 := fmt.Sprintf("user%d", dist.Uint64())
+		for id1 == id2 {
+			id1 = fmt.Sprintf("user%d", dist.Uint64())
+			id2 = fmt.Sprintf("user%d", dist.Uint64())
+		}
+		userIDs[id1] = true
+		userIDs[id2] = true
 
 		go func() {
 			defer wg.Done()
@@ -137,11 +145,13 @@ func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorC
 			err = client.Find(ctx, id2, &user2)
 			require.NoError(t, err)
 
-			err = user1.TransferBalance(ctx, user2, 10)
+			b11, b12, err := user1.TransferBalance(ctx, user2, 10)
 			require.NoError(t, err)
+			println(id1, id2, b11, b12)
 
-			err = user2.TransferBalance(ctx, user1, 10)
+			b21, b22, err := user2.TransferBalance(ctx, user1, 10)
 			require.NoError(t, err)
+			println(id1, id2, b21, b22)
 		}()
 	}
 	wg.Wait()
@@ -155,4 +165,13 @@ func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorC
 
 	average := total / time.Duration(count)
 	log.Println("Average:", average)
+
+	for id := range userIDs {
+		var user types.User
+		err := client.Find(ctx, id, &user)
+		require.NoError(t, err)
+		balance, err := user.GetBalance(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, 1000000, balance)
+	}
 }

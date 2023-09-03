@@ -9,8 +9,8 @@ import (
 
 type User interface {
 	jetflow.Operator
-	TransferBalance(ctx context.Context, u2 User, amount int) error
-	AddBalance(ctx context.Context, amount int) error
+	TransferBalance(ctx context.Context, u2 User, amount int) (int, int, error)
+	AddBalance(ctx context.Context, amount int) (int, error)
 	GetBalance(ctx context.Context) (int, error)
 }
 
@@ -30,33 +30,33 @@ func (u *user) ID() string {
 	return u.id
 }
 
-func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (err error) {
+func (u *user) TransferBalance(ctx context.Context, u2 User, amount int) (int, int, error) {
 	if amount < 0 {
-		return errors.New("amount cannot be negative")
+		return 0, 0, errors.New("amount cannot be negative")
 	}
 
 	if u.balance < amount {
-		return errors.New("insufficient balance")
+		return 0, 0, errors.New("insufficient balance")
 	}
 
-	err = u2.AddBalance(ctx, amount)
+	res, err := u2.AddBalance(ctx, amount)
 	if err != nil {
-		return errors.Wrap(err, "add balance to u2")
+		return 0, 0, errors.Wrap(err, "add balance to u2")
 	}
 
 	u.balance -= amount
 
-	return nil
+	return u.balance, res, nil
 }
 
-func (u *user) AddBalance(ctx context.Context, amount int) error {
+func (u *user) AddBalance(ctx context.Context, amount int) (int, error) {
 	if amount < 0 {
-		return errors.New("amount cannot be negative")
+		return 0, errors.New("amount cannot be negative")
 	}
 
 	u.balance += amount
 
-	return nil
+	return u.balance, nil
 }
 
 func (u *user) GetBalance(ctx context.Context) (int, error) {

@@ -25,7 +25,7 @@ func New{{ $type.Name }}Handler(id string) jetflow.OperatorHandler {
 	return &{{ $type.Name }}Handler{instance}
 }
 
-func (o *{{$type.Name}}Handler) Handle(ctx context.Context, client jetflow.OperatorClient, call *jetflow.Request) (res []byte, err error) {
+func (o *{{$type.Name}}Handler) Handle(ctx context.Context, client jetflow.OperatorClient, call *jetflow.Request) (bytes []byte, err error) {
 	log.Println("{{$type.Name}}Handler.Handle\n", call)
 	switch call.Method {
 {{ range $i, $method := $type.Methods }}
@@ -42,8 +42,11 @@ func (o *{{$type.Name}}Handler) Handle(ctx context.Context, client jetflow.Opera
 {{- end }}
 {{- end }}
 {{- end }}
-		{{ range $i, $param := $method.Results -}}
-		res{{$i}}, {{ end -}}
+{{- if gt (len $method.Results) 0 }}
+		res := {{$type.Name}}_{{$method.Name}}_Result{}
+{{- end }}
+{{ range $i, $param := $method.Results -}}
+		res.Res{{$i}}, {{ end -}}
 		err = o.instance.{{$method.Name}}(
 			ctx,
 {{- range $i, $param := $method.Parameters }}
@@ -54,17 +57,12 @@ func (o *{{$type.Name}}Handler) Handle(ctx context.Context, client jetflow.Opera
 			return nil, errors.Wrap(err, "calling {{$type.Name}}.{{$method.Name}}")
 		}
 {{- if gt (len $method.Results) 0 }}
-		result := {{$type.Name}}_{{$method.Name}}_Result{
-{{- range $i, $param := $method.Results }}
-			Res{{$i}}: res{{$i}},
-{{- end }}
-		}
-		res, err = json.Marshal(result)
+		bytes, err = json.Marshal(res)
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling {{$type.Name}}_{{$method.Name}}_Result")
 		}
 {{- end }}
-		return res, nil
+		return bytes, nil
 {{ end }}
 	default:
 		return nil, errors.Errorf("unknown method %s", call.Method)

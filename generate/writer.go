@@ -49,7 +49,7 @@ func (w *Writer) Write() error {
 			filename = strings.TrimSuffix(filename, "tmpl")
 			err := w.executeTemplate(tmpl, filename, t)
 			if err != nil {
-				return errors.Wrap(err, "executing template")
+				return errors.Wrapf(err, "executing %s template", filename)
 			}
 		}
 	}
@@ -57,7 +57,7 @@ func (w *Writer) Write() error {
 	typesTmpl, err := template.New("types").Parse(typesTemplate)
 	err = w.executeTemplate(typesTmpl, "types.go", nil)
 	if err != nil {
-		return errors.Wrap(err, "executing types template")
+		return errors.Wrap(err, "executing types.go template")
 	}
 
 	return nil
@@ -90,16 +90,14 @@ func (w *Writer) executeTemplate(tmpl *template.Template, filename string, t *Ty
 
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
+		println(string(buf.Bytes()))
 		return errors.Wrap(err, "formatting source")
 	}
-
-	println(filename, string(out))
 
 	_, err = file.Write(out)
 	if err != nil {
 		return errors.Wrap(err, "writing to file")
 	}
 
-	println("filename", filename)
 	return nil
 }

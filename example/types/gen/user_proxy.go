@@ -35,11 +35,16 @@ type User_TransferBalance_Args struct {
 	Amount int
 }
 
+type User_TransferBalance_Result struct {
+	Res0 int
+	Res1 int
+}
+
 func (u *UserProxy) TransferBalance(
 	ctx context.Context,
 	u2 types.User,
 	amount int,
-) (err error) {
+) (res0 int, res1 int, err error) {
 	args := User_TransferBalance_Args{
 		u2.(*UserProxy),
 		amount,
@@ -58,23 +63,35 @@ func (u *UserProxy) TransferBalance(
 		Args:   data,
 	}
 
-	_, err = u.client.Call(ctx, call)
+	var res []byte
+	res, err = u.client.Call(ctx, call)
 	if err != nil {
 		err = errors.Wrap(err, "call client UserProxy.TransferBalance")
 		return
 	}
 
-	return nil
+	var result User_TransferBalance_Result
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		err = errors.Wrap(err, "Unmarshalling User_TransferBalance_Result")
+		return
+	}
+
+	return result.Res0, result.Res1, nil
 }
 
 type User_AddBalance_Args struct {
 	Amount int
 }
 
+type User_AddBalance_Result struct {
+	Res0 int
+}
+
 func (u *UserProxy) AddBalance(
 	ctx context.Context,
 	amount int,
-) (err error) {
+) (res0 int, err error) {
 	args := User_AddBalance_Args{
 		amount,
 	}
@@ -92,13 +109,21 @@ func (u *UserProxy) AddBalance(
 		Args:   data,
 	}
 
-	_, err = u.client.Call(ctx, call)
+	var res []byte
+	res, err = u.client.Call(ctx, call)
 	if err != nil {
 		err = errors.Wrap(err, "call client UserProxy.AddBalance")
 		return
 	}
 
-	return nil
+	var result User_AddBalance_Result
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		err = errors.Wrap(err, "Unmarshalling User_AddBalance_Result")
+		return
+	}
+
+	return result.Res0, nil
 }
 
 type User_GetBalance_Result struct {
@@ -124,7 +149,8 @@ func (u *UserProxy) GetBalance(
 	var result User_GetBalance_Result
 	err = json.Unmarshal(res, &result)
 	if err != nil {
-		return 0, errors.Wrap(err, "Unmarshalling User_GetBalance_Result")
+		err = errors.Wrap(err, "Unmarshalling User_GetBalance_Result")
+		return
 	}
 
 	return result.Res0, nil

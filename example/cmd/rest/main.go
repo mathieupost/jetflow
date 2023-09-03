@@ -69,10 +69,11 @@ func main() {
 				user := r.Context().Value("user").(types.User)
 				user2 := r.Context().Value("user2").(types.User)
 				amount := r.Context().Value("amount").(int)
-				err := user.TransferBalance(r.Context(), user2, amount)
+				balance1, balance2, err := user.TransferBalance(r.Context(), user2, amount)
 				if err != nil {
 					log.Fatal(r.URL.Path, err.Error())
 				}
+				fmt.Fprintf(w, "{balance1:%d,balance2:%d}", balance1, balance2)
 			})
 		})
 	})
