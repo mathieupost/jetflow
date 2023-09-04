@@ -1,0 +1,40 @@
+version: "3.7"
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - 5775:5775/udp
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 16686:16686
+      - 14268:14268
+      - 14250:14250
+      - 9411:9411
+      - 4318:4318
+
+  nats:
+    image: nats
+    command:
+      - --js
+
+  consumer:
+    image: simplebank-consumer:latest
+    deploy:
+      replicas: 2
+    environment:
+      CONSUMER_ID: "{{.Task.Slot}}"
+    depends_on:
+      - nats
+      - jaeger
+
+  api:
+    image: simplebank-api:latest
+    depends_on:
+      - nats
+      - jaeger
+    ports:
+      - 8080:8080

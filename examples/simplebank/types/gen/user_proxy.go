@@ -9,7 +9,7 @@ import (
 	"github.com/mathieupost/jetflow"
 	"github.com/pkg/errors"
 
-	types "github.com/mathieupost/jetflow/example/types"
+	types "github.com/mathieupost/jetflow/examples/simplebank/types"
 )
 
 var (

@@ -1,11 +1,11 @@
-module github.com/mathieupost/jetflow/example
+module github.com/mathieupost/jetflow/examples/simplebank
 
-go 1.20
+go 1.21
 
 require (
 	github.com/mathieupost/jetflow v0.0.0-00010101000000-000000000000
 	github.com/nats-io/nats-server/v2 v2.9.21
-	github.com/nats-io/nats.go v1.28.0
+	github.com/nats-io/nats.go v1.29.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.16.0
@@ -73,4 +73,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/mathieupost/jetflow => ./..
+replace github.com/mathieupost/jetflow => ./../..

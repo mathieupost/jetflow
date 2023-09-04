@@ -1,6 +1,6 @@
 # https://numtide.github.io/devshell
 [[commands]]
-package = "go"
+package = "go_1_21"
 
 [[commands]]
 package = "kind"

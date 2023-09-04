@@ -24,12 +24,12 @@ func TestWriter(t *testing.T) {
 		},
 	}
 	s := &State{
-		Package: "github.com/mathieupost/jetflow/example/types",
+		Package: "github.com/mathieupost/jetflow/examples/simplebank/types",
 		Types: map[string]*Type{
 			"User": user,
 		},
 	}
-	w := NewWriter(s, "../example/types/gen")
+	w := NewWriter(s, "../examples/simplebank/types/gen")
 	err := w.Write()
 	if err != nil {
 		t.Fatal(err)

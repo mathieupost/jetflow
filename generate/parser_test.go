@@ -7,5 +7,5 @@ import (
 )
 
 func TestParsePackage(t *testing.T) {
-	generate.ParsePackage("../example/types")
+	generate.ParsePackage("../examples/simplebank/types")
 }

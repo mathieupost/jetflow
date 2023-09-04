@@ -10,7 +10,7 @@ import (
 	"github.com/mathieupost/jetflow/log"
 	"github.com/pkg/errors"
 
-	types "github.com/mathieupost/jetflow/example/types"
+	types "github.com/mathieupost/jetflow/examples/simplebank/types"
 )
 
 var _ jetflow.OperatorHandler = (*UserHandler)(nil)

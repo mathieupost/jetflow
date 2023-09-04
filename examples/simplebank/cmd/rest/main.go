@@ -16,8 +16,8 @@ import (
 	natsjetstream "github.com/nats-io/nats.go/jetstream"
 	"go.opentelemetry.io/otel"
 
-	"github.com/mathieupost/jetflow/example/types"
-	"github.com/mathieupost/jetflow/example/types/gen"
+	"github.com/mathieupost/jetflow/examples/simplebank/types"
+	"github.com/mathieupost/jetflow/examples/simplebank/types/gen"
 )
 
 func main() {

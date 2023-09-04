@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 
-	"github.com/mathieupost/jetflow/example/types"
-	"github.com/mathieupost/jetflow/example/types/gen"
+	"github.com/mathieupost/jetflow/examples/simplebank/types"
+	"github.com/mathieupost/jetflow/examples/simplebank/types/gen"
 )
 
 func TestTransportChannel(t *testing.T) {

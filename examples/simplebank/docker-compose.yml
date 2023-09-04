@@ -12,16 +12,16 @@ services:
 
   consumer:
     build:
-      context: ..
-      dockerfile: ./example/cmd/consumer/Dockerfile
+      context: ../..
+      dockerfile: ./examples/simplebank/cmd/consumer/Dockerfile
     depends_on:
       - nats
       - jaeger
 
   api:
     build:
-      context: ..
-      dockerfile: ./example/cmd/rest/Dockerfile
+      context: ../..
+      dockerfile: ./examples/simplebank/cmd/rest/Dockerfile
     depends_on:
       - nats
       - jaeger

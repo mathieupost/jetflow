@@ -1,6 +1,6 @@
 module github.com/mathieupost/jetflow
 
-go 1.20
+go 1.21
 
 require (
 	github.com/huandu/go-clone v1.6.0
@@ -66,7 +66,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.3.0
-	github.com/nats-io/nats.go v1.28.0
+	github.com/nats-io/nats.go v1.29.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

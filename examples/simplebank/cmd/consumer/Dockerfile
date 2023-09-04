@@ -4,7 +4,7 @@ WORKDIR /app
 COPY ../../../go.mod ../../../go.sum ./
 RUN go mod download
 
-WORKDIR /app/example
+WORKDIR /app/examples/simplebank
 COPY ../../go.mod ../../go.sum ./
 RUN go mod download
 
@@ -12,5 +12,5 @@ WORKDIR /app
 COPY . .
 RUN go work sync
 
-RUN go build ./example/cmd/rest
-ENTRYPOINT ./rest
+RUN go build ./examples/simplebank/cmd/consumer
+ENTRYPOINT ./consumer
