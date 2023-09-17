@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"reflect"
 	"sync"
 
 	"github.com/huandu/go-clone"
@@ -80,11 +81,6 @@ func (s *Storage) Prepare(ctx context.Context, call *jetflow.Request) error {
 		return errors.Wrap(err, "loading committed version")
 	}
 
-	if committedVersion.prepared != "" {
-		// Already prepared by another request.
-		return errors.New("already prepared")
-	}
-
 	requestOperatorKey := operatorKey + "." + call.OperationID
 	requestVersion, err := s.loadVersion(requestOperatorKey)
 	if err != nil {
@@ -96,6 +92,25 @@ func (s *Storage) Prepare(ctx context.Context, call *jetflow.Request) error {
 	if requestVersion.base != committedVersion.key {
 		// A new version is already committed.
 		return errors.New("base outdated")
+	}
+
+	requestOperator, ok := s.versionOperatorMapping.Load(requestVersion.key)
+	if !ok {
+		return errors.Errorf("request operator does not exist for %s", requestOperatorKey)
+	}
+	baseOperator, ok := s.versionOperatorMapping.Load(requestVersion.base)
+	if !ok {
+		return errors.Errorf("base operator does not exist for %s", requestOperatorKey)
+	}
+	equal := reflect.DeepEqual(requestOperator, baseOperator)
+	if equal {
+		// Operator was not written
+		return nil
+	}
+
+	if committedVersion.prepared != "" {
+		// Already prepared by another request.
+		return errors.New("already prepared")
 	}
 
 	// Copy and set prepared to the version for the given request.
