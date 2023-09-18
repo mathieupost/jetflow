@@ -31,12 +31,10 @@ func (c *Client) Call(ctx context.Context, call *Request) (res []byte, err error
 	operatorspan, ok := ctx.Value("SPAN").(*trace.Span)
 	if ok {
 		(*operatorspan).End()
-	}
-	defer func() {
-		if ok {
+		defer func() {
 			_, *operatorspan = otel.Tracer("").Start(originalctx, "operator.Handle")
-		}
-	}()
+		}()
+	}
 
 	ctx, span := otel.Tracer("client").Start(ctx, "jetflow.Client.Call."+call.Name+"."+call.Method)
 	defer span.End()
