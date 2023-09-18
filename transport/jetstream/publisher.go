@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"os"
+	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
@@ -56,8 +59,15 @@ func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *j
 		return nil, errors.Wrap(err, "marshal message")
 	}
 
-	// Create nats message
 	subject := fmt.Sprintf("%s.%s.%s", STREAM_NAME_OPERATOR, call.Name, call.ID)
+	hasher := fnv.New32a()
+	hasher.Write([]byte(subject))
+	sum := hasher.Sum32()
+	n, err := strconv.Atoi(os.Getenv("CONSUMERS"))
+	consumerID := sum % uint32(n)
+
+	// Create nats message
+	subject = fmt.Sprintf("%s.%d", subject, consumerID)
 	msg := nats.NewMsg(subject)
 	msg.Header.Set("ClientID", d.id)
 	msg.Data = payload
@@ -88,7 +98,7 @@ func (d *Publisher) initStreams(ctx context.Context) error {
 
 	_, err = d.jetstream.CreateStream(ctx, jetstream.StreamConfig{
 		Name:      STREAM_NAME_OPERATOR,
-		Subjects:  []string{STREAM_NAME_OPERATOR + ".*.*"},
+		Subjects:  []string{STREAM_NAME_OPERATOR + ".*.*.*"},
 		Retention: jetstream.WorkQueuePolicy,
 	})
 	if err != nil {

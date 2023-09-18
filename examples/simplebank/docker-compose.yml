@@ -10,18 +10,37 @@ services:
     image: nats
     command: --js
 
-  consumer:
+  consumer-1:
+    image: simplebank-consumer:latest
     build:
       context: ../..
       dockerfile: ./examples/simplebank/cmd/consumer/Dockerfile
+    environment:
+      - CONSUMERS=2
+      - CONSUMER_ID=0
+    depends_on:
+      - nats
+      - jaeger
+
+  consumer-2:
+    image: simplebank-consumer:latest
+    build:
+      context: ../..
+      dockerfile: ./examples/simplebank/cmd/consumer/Dockerfile
+    environment:
+      - CONSUMERS=2
+      - CONSUMER_ID=1
     depends_on:
       - nats
       - jaeger
 
   api:
+    image: simplebank-api:latest
     build:
       context: ../..
       dockerfile: ./examples/simplebank/cmd/rest/Dockerfile
+    environment:
+      - CONSUMERS=2
     depends_on:
       - nats
       - jaeger

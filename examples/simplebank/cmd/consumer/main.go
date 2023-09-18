@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/storage/memory"
@@ -16,7 +18,12 @@ import (
 )
 
 func main() {
-	tp, shutdown, err := tracing.NewProvider("jaeger:4318")
+	id := os.Getenv("CONSUMER_ID")
+	if id == "" {
+		panic("no CONSUMER_ID specified")
+	}
+
+	tp, shutdown, err := tracing.NewProvider("jaeger:4318", fmt.Sprintf("consumer-%s", id))
 	if err != nil {
 		log.Fatal("new tracing provider", err.Error())
 	}
@@ -46,7 +53,7 @@ func main() {
 	storage := memory.NewStorage(handlerFactory)
 
 	executor := jetflow.NewExecutor(storage, client)
-	jetstream.NewConsumer(ctx, js, executor)
+	jetstream.NewConsumer(ctx, id, js, executor)
 
 	log.Println("Consumer started")
 	<-ctx.Done()

@@ -3,8 +3,8 @@ package jetstream
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
@@ -23,12 +23,10 @@ type Consumer struct {
 
 func NewConsumer(
 	ctx context.Context,
+	id string,
 	jetstream jetstream.JetStream,
 	handler jetflow.RequestHandler,
 ) *Consumer {
-	id := uuid.NewString()
-	id = id[len(id)-12:]
-
 	consumer := &Consumer{
 		id:        id,
 		jetstream: jetstream,
@@ -46,8 +44,9 @@ func (r *Consumer) initConsumer(ctx context.Context) error {
 		ctx,
 		STREAM_NAME_OPERATOR,
 		jetstream.ConsumerConfig{
-			Durable:   "Consumer-" + r.id,
-			AckPolicy: jetstream.AckExplicitPolicy,
+			Durable:       "Consumer-" + r.id,
+			AckPolicy:     jetstream.AckExplicitPolicy,
+			FilterSubject: fmt.Sprintf("%s.*.*.%s", STREAM_NAME_OPERATOR, r.id),
 		},
 	)
 	if err != nil {
