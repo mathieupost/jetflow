@@ -59,24 +59,31 @@ func TestTransportJetStream(t *testing.T) {
 	if err != nil {
 		log.Fatal("new tracing provider", err.Error())
 	}
-	defer shutdown()
+	t.Cleanup(shutdown)
 	otel.SetTracerProvider(tp)
 
 	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	t.Cleanup(cancel)
 
+	consumerAmount := 10
 	js := initJetStream(t, ctx)
 
 	factoryMapping := gen.ProxyFactoryMapping()
-	publisher := jetstream.NewPublisher(ctx, js)
+	publisher := jetstream.NewPublisher(ctx, js, consumerAmount)
 	client := jetflow.NewClient(factoryMapping, publisher)
 
-	handlerFactory := gen.HandlerFactoryMapping()
-	storage := memory.NewStorage(handlerFactory)
+	for i := 0; i < consumerAmount; i++ {
+		factoryMapping := gen.ProxyFactoryMapping()
+		publisher := jetstream.NewPublisher(ctx, js, consumerAmount)
+		client := jetflow.NewClient(factoryMapping, publisher)
 
-	executor := jetflow.NewExecutor(storage, client)
-	_ = jetstream.NewConsumer(ctx, js, executor)
+		handlerFactory := gen.HandlerFactoryMapping()
+		storage := memory.NewStorage(handlerFactory)
+
+		executor := jetflow.NewExecutor(storage, client)
+		_ = jetstream.NewConsumer(ctx, i, js, executor)
+	}
 
 	IntegrationTest(t, ctx, client)
 	tp.ForceFlush(ctx)
