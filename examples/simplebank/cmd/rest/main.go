@@ -27,6 +27,10 @@ func main() {
 	}
 	defer shutdown()
 	otel.SetTracerProvider(tp)
+	defer func() {
+		tp.ForceFlush(context.Background())
+		println("flushed")
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
