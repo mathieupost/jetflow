@@ -26,7 +26,7 @@ import (
 )
 
 func TestTransportChannel(t *testing.T) {
-	tp, shutdown, err := tracing.NewProvider("localhost:4318")
+	tp, shutdown, err := tracing.NewProvider("localhost:4318", "testchannel")
 	if err != nil {
 		log.Fatal("new tracing provider", err.Error())
 	}
@@ -54,7 +54,7 @@ func TestTransportChannel(t *testing.T) {
 }
 
 func TestTransportJetStream(t *testing.T) {
-	tp, shutdown, err := tracing.NewProvider("localhost:4318")
+	tp, shutdown, err := tracing.NewProvider("localhost:4318", "testjetstream")
 	if err != nil {
 		log.Fatal("new tracing provider", err.Error())
 	}

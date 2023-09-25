@@ -5,10 +5,24 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
       - 16686:16686
-
+      - 4318:4318
   nats:
     image: nats
     command: --js
+    ports:
+      - 4222:4222
+
+  consumer-0:
+    image: simplebank-consumer:latest
+    build:
+      context: ../..
+      dockerfile: ./examples/simplebank/cmd/consumer/Dockerfile
+    environment:
+      - CONSUMERS=3
+      - CONSUMER_ID=0
+    depends_on:
+      - nats
+      - jaeger
 
   consumer-1:
     image: simplebank-consumer:latest
@@ -16,8 +30,8 @@ services:
       context: ../..
       dockerfile: ./examples/simplebank/cmd/consumer/Dockerfile
     environment:
-      - CONSUMERS=2
-      - CONSUMER_ID=0
+      - CONSUMERS=3
+      - CONSUMER_ID=1
     depends_on:
       - nats
       - jaeger
@@ -28,8 +42,8 @@ services:
       context: ../..
       dockerfile: ./examples/simplebank/cmd/consumer/Dockerfile
     environment:
-      - CONSUMERS=2
-      - CONSUMER_ID=1
+      - CONSUMERS=3
+      - CONSUMER_ID=2
     depends_on:
       - nats
       - jaeger
@@ -40,7 +54,7 @@ services:
       context: ../..
       dockerfile: ./examples/simplebank/cmd/rest/Dockerfile
     environment:
-      - CONSUMERS=2
+      - CONSUMERS=3
     depends_on:
       - nats
       - jaeger

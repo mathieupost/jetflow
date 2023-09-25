@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-chi/chi"
@@ -14,6 +15,7 @@ import (
 	"github.com/mathieupost/jetflow/transport/jetstream"
 	"github.com/nats-io/nats.go"
 	natsjetstream "github.com/nats-io/nats.go/jetstream"
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
 
 	"github.com/mathieupost/jetflow/examples/simplebank/types"
@@ -21,7 +23,20 @@ import (
 )
 
 func main() {
-	tp, shutdown, err := tracing.NewProvider("jaeger:4318", "api")
+	consumersAmount, err := strconv.Atoi(os.Getenv("CONSUMERS"))
+	if err != nil {
+		panic(errors.Wrap(err, "parsing CONSUMERS"))
+	}
+	natsHost := os.Getenv("NATS_HOST")
+	if natsHost == "" {
+		natsHost = "nats"
+	}
+	jaegerHost := os.Getenv("JAEGER_HOST")
+	if jaegerHost == "" {
+		jaegerHost = "jaeger"
+	}
+
+	tp, shutdown, err := tracing.NewProvider(jaegerHost+":4318", "api")
 	if err != nil {
 		log.Fatal("new tracing provider", err.Error())
 	}
@@ -35,7 +50,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	nc, err := nats.Connect("nats")
+	nc, err := nats.Connect(natsHost)
 	if err != nil {
 		log.Fatal("connecting to NATS", err.Error())
 	}
@@ -46,7 +61,7 @@ func main() {
 	}
 
 	factoryMapping := gen.ProxyFactoryMapping()
-	publisher := jetstream.NewPublisher(ctx, js)
+	publisher := jetstream.NewPublisher(ctx, js, consumersAmount)
 	client := jetflow.NewClient(factoryMapping, publisher)
 
 	r := chi.NewRouter()

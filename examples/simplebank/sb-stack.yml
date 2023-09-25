@@ -20,12 +20,15 @@ services:
     image: nats
     command:
       - --js
+    ports:
+      - 4222:4222
 
   consumer:
     image: simplebank-consumer:latest
     deploy:
-      replicas: 2
+      replicas: 10
     environment:
+      CONSUMERS: 10
       CONSUMER_ID: "{{.Task.Slot}}"
     depends_on:
       - nats
@@ -33,6 +36,8 @@ services:
 
   api:
     image: simplebank-api:latest
+    environment:
+      CONSUMERS: 10
     depends_on:
       - nats
       - jaeger
