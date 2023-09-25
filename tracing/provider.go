@@ -10,6 +10,8 @@ import (
 func NewProvider(endpoint, name string) (*trace.TracerProvider, func(), error) {
 	ctx := context.Background()
 	exp, err := newExporter(ctx, endpoint)
+	// exp, err := newStdoutExporter(ctx, endpoint)
+	// exp, err := newNoopExporter(ctx, endpoint)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "creating trace exporter")
 	}
