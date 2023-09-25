@@ -145,13 +145,21 @@ func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorC
 			err = client.Find(ctx, id2, &user2)
 			require.NoError(t, err)
 
-			b11, b12, err := user1.TransferBalance(ctx, user2, 10)
-			require.NoError(t, err)
-			println(id1, id2, b11, b12)
+			err = fmt.Errorf("true")
+			for err != nil {
+				_, _, err = user1.TransferBalance(ctx, user2, 10)
+				if err != nil {
+					require.ErrorContains(t, err, "failed to prepare")
+				}
+			}
 
-			b21, b22, err := user2.TransferBalance(ctx, user1, 10)
-			require.NoError(t, err)
-			println(id1, id2, b21, b22)
+			err = fmt.Errorf("true")
+			for err != nil {
+				_, _, err = user2.TransferBalance(ctx, user1, 10)
+				if err != nil {
+					require.ErrorContains(t, err, "failed to prepare")
+				}
+			}
 		}()
 	}
 	wg.Wait()
@@ -172,6 +180,6 @@ func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorC
 		require.NoError(t, err)
 		balance, err := user.GetBalance(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, 1000000, balance)
+		assert.Equal(t, 1000000, balance, "for user %s", id)
 	}
 }
