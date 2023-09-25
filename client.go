@@ -54,6 +54,8 @@ func (c *Client) Call(ctx context.Context, call *Request) (res []byte, err error
 		return nil, errors.Wrap(err, "dispatching request")
 	}
 
+	ctx, span = otel.Tracer("client").Start(ctx, "jetflow.Client.WaitForReply")
+	defer span.End()
 	select {
 	case reply := <-replyChan:
 		// Mutate the ctx's involved operators.
