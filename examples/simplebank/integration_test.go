@@ -17,6 +17,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	natsjetstream "github.com/nats-io/nats.go/jetstream"
+	"github.com/pingcap/go-ycsb/pkg/generator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
@@ -111,8 +112,8 @@ func initJetStream(t *testing.T, ctx context.Context) natsjetstream.JetStream {
 
 func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorClient) {
 	// Create a zipf distribution
-	r := rand.New(rand.NewSource(87945723908))
-	dist := rand.NewZipf(r, 1.5, 1, 100)
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	zipfGen := generator.NewZipfianWithItems(10000000, generator.ZipfianConstant)
 
 	var wg sync.WaitGroup
 	var times sync.Map
@@ -120,11 +121,10 @@ func IntegrationTest(t *testing.T, ctx context.Context, client jetflow.OperatorC
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		i := i
-		id1 := fmt.Sprintf("user%d", dist.Uint64())
-		id2 := fmt.Sprintf("user%d", dist.Uint64())
+		id1 := fmt.Sprintf("user%d", zipfGen.Next(r))
+		id2 := fmt.Sprintf("user%d", zipfGen.Next(r))
 		for id1 == id2 {
-			id1 = fmt.Sprintf("user%d", dist.Uint64())
-			id2 = fmt.Sprintf("user%d", dist.Uint64())
+			id2 = fmt.Sprintf("user%d", zipfGen.Next(r))
 		}
 		userIDs[id1] = true
 		userIDs[id2] = true
