@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"os"
-	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
@@ -26,9 +24,10 @@ type Publisher struct {
 	jetstream        jetstream.JetStream
 	id               string
 	responseChannels sync.Map
+	consumerAmount   int
 }
 
-func NewPublisher(ctx context.Context, jetstream jetstream.JetStream) *Publisher {
+func NewPublisher(ctx context.Context, jetstream jetstream.JetStream, consumerAmount int) *Publisher {
 	id := uuid.NewString()
 	id = id[len(id)-12:]
 
@@ -36,6 +35,7 @@ func NewPublisher(ctx context.Context, jetstream jetstream.JetStream) *Publisher
 		id:               id,
 		jetstream:        jetstream,
 		responseChannels: sync.Map{},
+		consumerAmount:   consumerAmount,
 	}
 
 	d.initStreams(ctx)
@@ -46,8 +46,7 @@ func NewPublisher(ctx context.Context, jetstream jetstream.JetStream) *Publisher
 
 func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *jetflow.Response, error) {
 	originalCtx := ctx
-	ctx, span := otel.Tracer("").Start(ctx, "jetstream.Publisher.Publish")
-	defer span.End()
+	ctx, span := otel.Tracer("").Start(ctx, "jetstream.Publisher.buildmessage")
 
 	// Setup the channel to which the response will be sent.
 	responseChan := make(chan *jetflow.Response)
@@ -63,8 +62,7 @@ func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *j
 	hasher := fnv.New32a()
 	hasher.Write([]byte(subject))
 	sum := hasher.Sum32()
-	n, err := strconv.Atoi(os.Getenv("CONSUMERS"))
-	consumerID := sum % uint32(n)
+	consumerID := sum % uint32(d.consumerAmount)
 
 	// Create nats message
 	subject = fmt.Sprintf("%s.%d", subject, consumerID)
@@ -77,6 +75,9 @@ func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *j
 	carrier := propagation.HeaderCarrier(msg.Header)
 	propagator.Inject(originalCtx, carrier)
 
+	span.End()
+	ctx, span = otel.Tracer("").Start(ctx, "jetstream.Publisher.Publish")
+	defer span.End()
 	// Publish the message to the OPERATOR stream.
 	_, err = d.jetstream.PublishMsg(ctx, msg)
 	if err != nil {

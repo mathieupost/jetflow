@@ -16,14 +16,14 @@ import (
 )
 
 type Consumer struct {
-	id        string
+	id        int
 	jetstream jetstream.JetStream
 	handler   jetflow.RequestHandler
 }
 
 func NewConsumer(
 	ctx context.Context,
-	id string,
+	id int,
 	jetstream jetstream.JetStream,
 	handler jetflow.RequestHandler,
 ) *Consumer {
@@ -44,9 +44,9 @@ func (r *Consumer) initConsumer(ctx context.Context) error {
 		ctx,
 		STREAM_NAME_OPERATOR,
 		jetstream.ConsumerConfig{
-			Durable:       "Consumer-" + r.id,
+			Durable:       fmt.Sprintf("Consumer-%d", r.id),
 			AckPolicy:     jetstream.AckExplicitPolicy,
-			FilterSubject: fmt.Sprintf("%s.*.*.%s", STREAM_NAME_OPERATOR, r.id),
+			FilterSubject: fmt.Sprintf("%s.*.*.%d", STREAM_NAME_OPERATOR, r.id),
 		},
 	)
 	if err != nil {
