@@ -55,11 +55,6 @@ func (r *Consumer) initConsumer(ctx context.Context) error {
 	log.Println("Consumer.initConsumer", consumer.CachedInfo().Name)
 
 	consCtx, err := consumer.Consume(func(msg jetstream.Msg) {
-		// Extract the trace context from the message header.
-		propagator := propagation.TraceContext{}
-		carrier := propagation.HeaderCarrier(msg.Headers())
-		ctx := propagator.Extract(ctx, carrier)
-
 		go r.handle(ctx, msg)
 	})
 	if err != nil {
@@ -75,6 +70,11 @@ func (r *Consumer) initConsumer(ctx context.Context) error {
 }
 
 func (r *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
+	// Extract the trace context from the message header.
+	propagator := propagation.TraceContext{}
+	carrier := propagation.HeaderCarrier(msg.Headers())
+	ctx = propagator.Extract(ctx, carrier)
+
 	ctx, span := otel.Tracer("").Start(ctx, "jetstream.Consumer.handle")
 	defer span.End()
 
