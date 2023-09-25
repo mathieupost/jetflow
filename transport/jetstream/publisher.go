@@ -124,19 +124,7 @@ func (d *Publisher) initConsumer(ctx context.Context) error {
 	}
 
 	_, err = consumer.Consume(func(msg jetstream.Msg) {
-		// Unmarshal the response
-		response := &jetflow.Response{}
-		err := json.Unmarshal(msg.Data(), response)
-		if err != nil {
-			log.Fatalln("unmarshal result", err, string(msg.Data()))
-		}
-		// Acknowledge the result
-		err = msg.Ack()
-		if err != nil {
-			log.Fatalln("acknowledge result", err, string(msg.Data()))
-		}
-
-		d.handleResponse(response)
+		go d.handleMsg(msg)
 	})
 	if err != nil {
 		return errors.Wrap(err, "init message consumer")
@@ -145,11 +133,28 @@ func (d *Publisher) initConsumer(ctx context.Context) error {
 	return nil
 }
 
+func (d *Publisher) handleMsg(msg jetstream.Msg) {
+	// Unmarshal the response
+	response := &jetflow.Response{}
+	err := json.Unmarshal(msg.Data(), response)
+	if err != nil {
+		log.Fatalln("unmarshal result", err, string(msg.Data()))
+	}
+	// Acknowledge the result
+	err = msg.Ack()
+	if err != nil {
+		log.Fatalln("acknowledge result", err, string(msg.Data()))
+	}
+
+	d.handleResponse(response)
+}
+
 func (d *Publisher) handleResponse(response *jetflow.Response) {
-	c, ok := d.responseChannels.LoadAndDelete(response.RequestID)
+	c, ok := d.responseChannels.Load(response.RequestID)
 	if !ok {
 		log.Fatalln("response not found", response)
 	}
+	defer d.responseChannels.Delete(response.RequestID)
 
 	responseChan := c.(chan *jetflow.Response)
 	responseChan <- response
