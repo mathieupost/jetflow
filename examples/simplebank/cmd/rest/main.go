@@ -4,17 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 	"github.com/mathieupost/jetflow"
 	"github.com/mathieupost/jetflow/tracing"
 	"github.com/mathieupost/jetflow/transport/jetstream"
 	"github.com/nats-io/nats.go"
 	natsjetstream "github.com/nats-io/nats.go/jetstream"
+	"github.com/pingcap/go-ycsb/pkg/generator"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
 
@@ -67,6 +71,60 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RedirectSlashes)
+
+	rs := rand.New(rand.NewSource(time.Now().Unix()))
+	zipfGen := generator.NewZipfianWithItems(10000000, generator.ZipfianConstant)
+	r.Get("/bench/{read}/{write}/{transact}", func(w http.ResponseWriter, r *http.Request) {
+		readOps, _ := strconv.Atoi(chi.URLParam(r, "read"))
+		writeOps, _ := strconv.Atoi(chi.URLParam(r, "write"))
+		transactOps, _ := strconv.Atoi(chi.URLParam(r, "transact"))
+
+		// Get a random user
+		id1 := strconv.Itoa(int(zipfGen.Next(rs)))
+		var user1 types.User
+		client.Find(r.Context(), id1, &user1)
+
+		// Determine the transaction
+		total := readOps + writeOps + transactOps
+		pick := rand.Intn(total)
+
+		action := ""
+		var err error
+		switch {
+		case pick < readOps:
+			action = "read"
+			_, err = user1.GetBalance(r.Context())
+		case pick < writeOps+readOps:
+			action = "write"
+			_, err = user1.AddBalance(r.Context(), 1)
+		default:
+			action = "transact"
+			id2 := strconv.Itoa(int(zipfGen.Next(rs)))
+			for id1 == id2 {
+				id2 = strconv.Itoa(int(zipfGen.Next(rs)))
+			}
+
+			var user2 types.User
+			client.Find(r.Context(), id2, &user2)
+			id1 += (" " + id2)
+
+			_, _, err = user1.TransferBalance(r.Context(), user2, 1)
+		}
+
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+			render.Status(r, http.StatusInternalServerError)
+			log.Println(action, id1, errStr)
+		} else {
+			log.Println(action, id1)
+		}
+		fmt.Fprintf(w, `{
+  %s: %d,
+  error: %s
+}
+`, action, pick, errStr)
+	})
 
 	r.Route("/users/{user}", func(r chi.Router) {
 		r.Use(Operator[types.User](client, "user"))
