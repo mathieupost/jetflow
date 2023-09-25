@@ -41,7 +41,7 @@ func (s *Storage) Get(ctx context.Context, call *jetflow.Request) (jetflow.Opera
 	requestOperatorKey := operatorKey + "." + call.OperationID
 
 	// Load the operator version for the current request.
-	committedVersion := s.loadOrCreateVersion(operatorKey)
+	committedVersion := s.keyVersionMappingLoadOrStore(operatorKey)
 	operator, ok := s.versionOperatorMapping.Load(requestOperatorKey)
 	if !ok {
 		// Clone the committed version if there was no previous version for this request.
@@ -76,13 +76,13 @@ func (s *Storage) Prepare(ctx context.Context, call *jetflow.Request) error {
 	defer span.End()
 
 	operatorKey := call.Name + "." + call.ID
-	committedVersion, err := s.loadVersion(operatorKey)
+	committedVersion, err := s.keyVersionMappingLoad(operatorKey)
 	if err != nil {
 		return errors.Wrap(err, "loading committed version")
 	}
 
 	requestOperatorKey := operatorKey + "." + call.OperationID
-	requestVersion, err := s.loadVersion(requestOperatorKey)
+	requestVersion, err := s.keyVersionMappingLoad(requestOperatorKey)
 	if err != nil {
 		return errors.Wrap(err, "loading request version")
 	}
@@ -116,7 +116,7 @@ func (s *Storage) Prepare(ctx context.Context, call *jetflow.Request) error {
 	// Copy and set prepared to the version for the given request.
 	newCommittedVersion := committedVersion
 	newCommittedVersion.prepared = requestOperatorKey
-	updated := s.swapVersion(operatorKey, committedVersion, newCommittedVersion)
+	updated := s.keyVersionMappingSwap(operatorKey, committedVersion, newCommittedVersion)
 	if !updated {
 		return errors.New("failed to prepare")
 	}
@@ -130,10 +130,17 @@ func (s *Storage) Commit(ctx context.Context, call *jetflow.Request) error {
 
 	operatorKey := call.Name + "." + call.ID
 	requestOperatorKey := operatorKey + "." + call.OperationID
-	oldVersion, err := s.loadVersion(operatorKey)
+
+	// Delete the request version mapping.
+	defer s.keyVersionMapping.Delete(requestOperatorKey)
+
+	oldVersion, err := s.keyVersionMappingLoad(operatorKey)
 	if err != nil {
 		return errors.Wrap(err, "loading old version")
 	}
+
+	// Delete the previous operator version.
+	defer s.versionOperatorMapping.Delete(oldVersion.key)
 
 	if oldVersion.prepared != requestOperatorKey {
 		return errors.New("not prepared by this request")
@@ -141,15 +148,10 @@ func (s *Storage) Commit(ctx context.Context, call *jetflow.Request) error {
 
 	// Update the committed version to the prepared version.
 	newVersion := version{key: oldVersion.prepared}
-	updated := s.swapVersion(operatorKey, oldVersion, newVersion)
+	updated := s.keyVersionMappingSwap(operatorKey, oldVersion, newVersion)
 	if !updated {
 		return errors.New("failed to commit")
 	}
-
-	// Delete the request version mapping.
-	s.keyVersionMapping.Delete(requestOperatorKey)
-	// Delete the previous operator version.
-	s.versionOperatorMapping.Delete(oldVersion.key)
 
 	return nil
 }
@@ -166,14 +168,14 @@ func (s *Storage) Rollback(ctx context.Context, call *jetflow.Request) error {
 	s.versionOperatorMapping.Delete(requestOperatorKey)
 
 	// Unprepare if needed.
-	committedVersion, err := s.loadVersion(operatorKey)
+	committedVersion, err := s.keyVersionMappingLoad(operatorKey)
 	if err != nil {
 		return errors.Wrap(err, "loading committed version")
 	}
 	if committedVersion.prepared == requestOperatorKey {
 		newCommittedVersion := committedVersion
 		newCommittedVersion.prepared = ""
-		updated := s.swapVersion(operatorKey, committedVersion, newCommittedVersion)
+		updated := s.keyVersionMappingSwap(operatorKey, committedVersion, newCommittedVersion)
 		if !updated {
 			return errors.New("failed to rollback")
 		}
@@ -182,7 +184,7 @@ func (s *Storage) Rollback(ctx context.Context, call *jetflow.Request) error {
 	return nil
 }
 
-func (s *Storage) loadVersion(key string) (version, error) {
+func (s *Storage) keyVersionMappingLoad(key string) (version, error) {
 	v, _ := s.keyVersionMapping.Load(key)
 	version, ok := v.(version)
 	if !ok {
@@ -191,11 +193,11 @@ func (s *Storage) loadVersion(key string) (version, error) {
 	return version, nil
 }
 
-func (s *Storage) loadOrCreateVersion(key string) version {
+func (s *Storage) keyVersionMappingLoadOrStore(key string) version {
 	v, _ := s.keyVersionMapping.LoadOrStore(key, version{key: key})
 	return v.(version)
 }
 
-func (s *Storage) swapVersion(operatorKey string, old, version version) bool {
+func (s *Storage) keyVersionMappingSwap(operatorKey string, old, version version) bool {
 	return s.keyVersionMapping.CompareAndSwap(operatorKey, old, version)
 }
