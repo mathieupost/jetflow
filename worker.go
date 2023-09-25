@@ -45,11 +45,12 @@ func (w *Executor) Handle(ctx context.Context, req *Request) *Response {
 func (w *Executor) handleCall(ctx context.Context, call *Request) *Response {
 	originalRequestID := call.RequestID
 
+	retryEnabled := false
 	retryCount := 0
 	for {
 		res, success := w.try(ctx, call)
 
-		if !success {
+		if !success && retryEnabled {
 			// Create a new transaction id for the retry. Otherwise, the retry
 			// may use the old state of the involved operators.
 			transactionID := fmt.Sprintf("%s-%d", originalRequestID, retryCount)
@@ -90,6 +91,9 @@ func (w *Executor) try(ctx context.Context, call *Request) (*Response, bool) {
 		if success {
 			prepared := w.broadcast(ctx, MethodPrepare, operators)
 			success = prepared
+			if !prepared {
+				response.Error = errors.New("failed to prepare")
+			}
 		}
 
 		// Rollback and retry if we either got an error or if we could not
@@ -97,7 +101,7 @@ func (w *Executor) try(ctx context.Context, call *Request) (*Response, bool) {
 		if !success {
 			go w.broadcast(ctx, MethodRollback, operators)
 
-			return nil, false
+			return response, false
 		} else {
 			go w.broadcast(ctx, MethodCommit, operators)
 		}
