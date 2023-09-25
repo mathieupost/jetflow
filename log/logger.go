@@ -19,11 +19,10 @@ func Print(v ...interface{}) {
 
 func Println(v ...interface{}) {
 	Print(v...)
-	Print("\n")
 }
 
 func Fatalln(v ...interface{}) {
-	Println(v...)
+	Print(v...)
 	os.Exit(1)
 }
 
