@@ -8,7 +8,7 @@ import (
 )
 
 type User interface {
-	jetflow.Operator
+	jetflow.Operator // Inherit the ID() string method of jetflow.Operator.
 	TransferBalance(ctx context.Context, u2 User, amount int) (int, int, error)
 	AddBalance(ctx context.Context, amount int) (int, error)
 	GetBalance(ctx context.Context) (int, error)

@@ -17,11 +17,11 @@ func TestPrepare(t *testing.T) {
 
 	setup := func(ctx context.Context, trID, opID string) (jetflow.OperatorHandler, *jetflow.Request) {
 		call := &jetflow.Request{
-			OperationID: trID,
-			RequestID:   "req_id",
-			Name:        "TestType",
-			ID:          opID,
-			Args:        []byte("1"),
+			TransactionID: trID,
+			RequestID:     "req_id",
+			TypeName:      "TestType",
+			InstanceID:    opID,
+			Args:          []byte("1"),
 		}
 		operator, err := s.Get(ctx, call)
 		require.NoError(t, err)

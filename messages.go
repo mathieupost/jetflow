@@ -17,20 +17,20 @@ const (
 )
 
 type Request struct {
-	OperationID string `json:"o"`
-	RequestID   string `json:"r"`
+	TransactionID string `json:"o"`
+	RequestID     string `json:"r"`
 
-	Name   string `json:"n"`
-	ID     string `json:"i"`
-	Method string `json:"m"`
-	Args   []byte `json:"a"`
+	TypeName   string `json:"n"`
+	InstanceID string `json:"i"`
+	Method     string `json:"m"`
+	Args       []byte `json:"a"`
 }
 
 // String returns a string representation of the request.
 func (r *Request) String() string {
 	return fmt.Sprintf("%s %s %s(%s).%s(%s)",
-		r.OperationID, r.RequestID,
-		r.Name, r.ID, r.Method, string(r.Args),
+		r.TransactionID, r.RequestID,
+		r.TypeName, r.InstanceID, r.Method, string(r.Args),
 	)
 }
 

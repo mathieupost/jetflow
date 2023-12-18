@@ -55,9 +55,9 @@ func (w *Executor) handleCall(ctx context.Context, call *Request) *Response {
 			// may use the old state of the involved operators.
 			transactionID := fmt.Sprintf("%s-%d", originalRequestID, retryCount)
 			transactionID = transactionID[len(transactionID)-12:]
-			log.Println(call.OperationID, "->", transactionID,
+			log.Println(call.TransactionID, "->", transactionID,
 				"original:", originalRequestID)
-			call.OperationID = transactionID
+			call.TransactionID = transactionID
 			call.RequestID = transactionID
 
 			retryCount++
@@ -73,13 +73,13 @@ func (w *Executor) handleCall(ctx context.Context, call *Request) *Response {
 func (w *Executor) try(ctx context.Context, call *Request) (*Response, bool) {
 	log.Println("Executor.processRequest\n", call)
 
-	ctx = ContextWithOperationID(ctx, call.OperationID)
+	ctx = ContextWithOperationID(ctx, call.TransactionID)
 
 	response := w.handle(ctx, call)
 	log.Println("Executor.processRequest response:", response, "\n", call)
 
 	// The initial request has the same id as the operation.
-	isInitialRequest := call.OperationID == call.RequestID
+	isInitialRequest := call.TransactionID == call.RequestID
 	if isInitialRequest {
 		ctx, span := otel.Tracer("").Start(ctx, "jetflow.Executor.2pc")
 		defer span.End()
@@ -92,7 +92,7 @@ func (w *Executor) try(ctx context.Context, call *Request) (*Response, bool) {
 			prepared := w.broadcast(ctx, MethodPrepare, operators)
 			success = prepared
 			if !prepared {
-				response.Error = errors.New("failed to prepare")
+				response.Error = errors.New("Failed to prepare")
 			}
 		}
 
@@ -120,15 +120,15 @@ func (w *Executor) broadcast(ctx context.Context, method Method, operators map[s
 	for name, instances := range operators {
 		for id := range instances {
 			request := &Request{
-				Name:   name,
-				ID:     id,
-				Method: string(method),
+				TypeName:   name,
+				InstanceID: id,
+				Method:     string(method),
 			}
 			wg.Add(1)
 			go func() {
 				_, err := w.client.Call(ctx, request)
 				if err != nil {
-					log.Println("Executor.broadcast error:", err)
+					println("Executor.broadcast error:", err.Error())
 					success.Store(false)
 				}
 				wg.Done()
@@ -143,7 +143,7 @@ func (w *Executor) handle(ctx context.Context, call *Request) *Response {
 	// (mis)use the context to keep track of the involved operators.
 	involvedOperators := map[string]map[string]bool{}
 	ctx = ContextWithInvolvedOperators(ctx, involvedOperators)
-	ContextAddInvolvedOperator(ctx, call.Name, call.ID)
+	ContextAddInvolvedOperator(ctx, call.TypeName, call.InstanceID)
 
 	operator, err := w.storage.Get(ctx, call)
 	if err != nil {

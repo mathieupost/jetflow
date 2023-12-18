@@ -58,7 +58,7 @@ func (d *Publisher) Publish(ctx context.Context, call *jetflow.Request) (chan *j
 		return nil, errors.Wrap(err, "marshal message")
 	}
 
-	subject := fmt.Sprintf("%s.%s.%s", STREAM_NAME_OPERATOR, call.Name, call.ID)
+	subject := fmt.Sprintf("%s.%s.%s", STREAM_NAME_OPERATOR, call.TypeName, call.InstanceID)
 	hasher := fnv.New32a()
 	hasher.Write([]byte(subject))
 	sum := hasher.Sum32()

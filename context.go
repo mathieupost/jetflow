@@ -9,7 +9,7 @@ type ctxKey string
 // operationIDKey
 var operationIDKey ctxKey = "OPERATION_ID"
 
-func OperationIDFromContext(ctx context.Context, callID string) string {
+func TransactionIDFromContext(ctx context.Context, callID string) string {
 	operationID, ok := ctx.Value(operationIDKey).(string)
 	if !ok {
 		return callID

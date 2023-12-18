@@ -85,11 +85,11 @@ func (u *{{$type.Name}}Proxy) {{ $method.Name }}(
 	}
 {{ end }}
 	call := &jetflow.Request{
-		Name:   "{{ $type.Name }}",
-		ID:     u.id,
-		Method: "{{ $method.Name }}",
+		TypeName:   "{{ $type.Name }}",
+		InstanceID: u.id,
+		Method:     "{{ $method.Name }}",
 {{- if gt (len $method.Parameters) 0 }}
-		Args:   data,
+		Args:       data,
 {{- end }}
 	}
 {{ if gt (len $method.Results) 0 }}

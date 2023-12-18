@@ -50,8 +50,8 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Maybe() // FIXME: Async call
 
 		request := &jetflow.Request{
-			OperationID: t.Name(),
-			RequestID:   t.Name(),
+			TransactionID: t.Name(),
+			RequestID:     t.Name(),
 		}
 		response := tt.worker.Handle(ctx, request)
 
@@ -66,8 +66,8 @@ func TestProcessRequest(t *testing.T) {
 		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, nil).Once()
 
 		request := &jetflow.Request{
-			OperationID: t.Name(),
-			RequestID:   "child",
+			TransactionID: t.Name(),
+			RequestID:     "child",
 		}
 		response := tt.worker.Handle(ctx, request)
 
@@ -88,8 +88,8 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Maybe() // FIXME: Async call
 
 		request := &jetflow.Request{
-			OperationID: t.Name(),
-			RequestID:   t.Name(),
+			TransactionID: t.Name(),
+			RequestID:     t.Name(),
 		}
 		response := tt.worker.Handle(ctx, request)
 
@@ -105,8 +105,8 @@ func TestProcessRequest(t *testing.T) {
 		tt.handler.EXPECT().Handle(ANY, ANY, ANY).Return(nil, err).Once()
 
 		request := &jetflow.Request{
-			OperationID: t.Name(),
-			RequestID:   "child",
+			TransactionID: t.Name(),
+			RequestID:     "child",
 		}
 		response := tt.worker.Handle(ctx, request)
 
@@ -128,8 +128,8 @@ func TestProcessRequest(t *testing.T) {
 		tt.client.EXPECT().Call(ANY, match(jetflow.MethodCommit)).Return(nil, nil).Maybe() // FIXME: Async call
 
 		request := &jetflow.Request{
-			OperationID: t.Name(),
-			RequestID:   t.Name(),
+			TransactionID: t.Name(),
+			RequestID:     t.Name(),
 		}
 		response := tt.worker.Handle(ctx, request)
 

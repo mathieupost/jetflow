@@ -15,14 +15,14 @@ import (
 var _ OperatorClient = (*Client)(nil)
 
 type Client struct {
-	mapping    ProxyFactoryMapping
-	dispatcher Publisher
+	mapping   ProxyFactoryMapping
+	publisher Publisher
 }
 
-func NewClient(mapping ProxyFactoryMapping, dispatcher Publisher) *Client {
+func NewClient(mapping ProxyFactoryMapping, publisher Publisher) *Client {
 	return &Client{
-		mapping:    mapping,
-		dispatcher: dispatcher,
+		mapping:   mapping,
+		publisher: publisher,
 	}
 }
 
@@ -36,20 +36,20 @@ func (c *Client) Call(ctx context.Context, call *Request) (res []byte, err error
 		}()
 	}
 
-	ctx, span := otel.Tracer("client").Start(ctx, "jetflow.Client.Call."+call.Name+"."+call.Method)
+	ctx, span := otel.Tracer("client").Start(ctx, "jetflow.Client.Call."+call.TypeName+"."+call.Method)
 	defer span.End()
 	span.SetAttributes(
-		attribute.String("operator", call.Name),
-		attribute.String("id", call.ID),
+		attribute.String("operator", call.TypeName),
+		attribute.String("id", call.InstanceID),
 	)
 
 	spanID := span.SpanContext().SpanID().String()
-	call.OperationID = OperationIDFromContext(ctx, spanID)
+	call.TransactionID = TransactionIDFromContext(ctx, spanID)
 	call.RequestID = spanID
 
 	log.Println("Client.Call:\n", call)
 
-	replyChan, err := c.dispatcher.Publish(ctx, call)
+	replyChan, err := c.publisher.Publish(ctx, call)
 	if err != nil {
 		return nil, errors.Wrap(err, "dispatching request")
 	}

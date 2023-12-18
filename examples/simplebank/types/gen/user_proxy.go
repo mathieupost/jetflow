@@ -57,10 +57,10 @@ func (u *UserProxy) TransferBalance(
 	}
 
 	call := &jetflow.Request{
-		Name:   "User",
-		ID:     u.id,
-		Method: "TransferBalance",
-		Args:   data,
+		TypeName:   "User",
+		InstanceID: u.id,
+		Method:     "TransferBalance",
+		Args:       data,
 	}
 
 	var res []byte
@@ -103,10 +103,10 @@ func (u *UserProxy) AddBalance(
 	}
 
 	call := &jetflow.Request{
-		Name:   "User",
-		ID:     u.id,
-		Method: "AddBalance",
-		Args:   data,
+		TypeName:   "User",
+		InstanceID: u.id,
+		Method:     "AddBalance",
+		Args:       data,
 	}
 
 	var res []byte
@@ -134,9 +134,9 @@ func (u *UserProxy) GetBalance(
 	ctx context.Context,
 ) (res0 int, err error) {
 	call := &jetflow.Request{
-		Name:   "User",
-		ID:     u.id,
-		Method: "GetBalance",
+		TypeName:   "User",
+		InstanceID: u.id,
+		Method:     "GetBalance",
 	}
 
 	var res []byte
