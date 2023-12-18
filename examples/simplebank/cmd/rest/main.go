@@ -72,6 +72,10 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RedirectSlashes)
 
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		render.JSON(w, r, map[string]string{"result": "ok"})
+	})
+
 	rs := rand.New(rand.NewSource(time.Now().Unix()))
 	zipfGen := generator.NewZipfianWithItems(10000000, generator.ZipfianConstant)
 	r.Get("/bench/{read}/{write}/{transact}", func(w http.ResponseWriter, r *http.Request) {
@@ -114,16 +118,15 @@ func main() {
 		errStr := ""
 		if err != nil {
 			errStr = err.Error()
-			render.Status(r, http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 			log.Println(action, id1, errStr)
-		} else {
-			log.Println(action, id1)
+			return
 		}
+		log.Println(action, id1, errStr)
 		fmt.Fprintf(w, `{
-  %s: %d,
-  error: %s
+  %s: %d
 }
-`, action, pick, errStr)
+`, action, pick)
 	})
 
 	r.Route("/users/{user}", func(r chi.Router) {
