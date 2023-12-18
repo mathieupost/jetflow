@@ -7,3 +7,12 @@ package = "kind"
 
 [[commands]]
 package = "kubernetes-helm"
+
+[[commands]]
+package = "fx"
+
+[[commands]]
+package = "bombardier"
+
+[[commands]]
+package = "natscli"
